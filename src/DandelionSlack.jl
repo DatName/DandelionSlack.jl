@@ -1,5 +1,5 @@
 module DandelionSlack
 
-# package code goes here
+include("WebApi/rtm.jl");
 
 end # module
