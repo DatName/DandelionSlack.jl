@@ -9,5 +9,19 @@ immutable RtmStart
 end
 
 function toparam(r::RtmStart)
-    Dict()
+    params = Dict("token" => r.token)
+
+    if !isnull(r.simple_latest)
+        params["simple_latest"] = get(r.simple_latest)
+    end
+
+    if !isnull(r.no_unreads)
+        params["no_unreads"] = get(r.no_unreads)
+    end
+
+    if !isnull(r.mpim_aware)
+        params["mpim_aware"] = get(r.mpim_aware)
+    end
+
+    params
 end
