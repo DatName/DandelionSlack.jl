@@ -1,3 +1,5 @@
+import JSON
+
 export toquery
 
 function isset(t::Any)
@@ -26,4 +28,17 @@ function toquery{T}(t::T)
         end
     end
     query_vars
+end
+
+function takefield(t::Any, )
+
+function deserialize{T}(json_string::AbstractString)
+    t = T()
+    json = JSON.parse(json_string)
+    for sym in fieldnames(T)
+        println("Symbol: $(sym)")
+        key = string(sym)
+        takefield(json, t, sym)
+    end
+    t
 end
