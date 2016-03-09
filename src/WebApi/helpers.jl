@@ -43,7 +43,6 @@ type MandatoryFieldNotPresentException <: Exception end
 function takefield(datatype::DataType, sym::Symbol, json::Dict)
     membertype = fieldtype(datatype, sym)
     fname = string(sym)
-    println("fname $(fname), sym $(sym), json $(json)")
     if membertype <: Nullable
         if haskey(json, fname)
             return membertype(json[fname])
@@ -64,13 +63,10 @@ end
 function deserialize{T}(datatype::T, json_string::AbstractString)
     v = []
     json = JSON.parse(json_string)
-    println("Sybols: $(fieldnames(T))")
     for sym in fieldnames(datatype)
-        println("Symbol: $(sym)")
         key = string(sym)
         value_from_json = takefield(datatype, sym, json)
         push!(v, value_from_json)
     end
-    println("Values: $(v)")
     datatype(v...)
 end
