@@ -30,15 +30,47 @@ function toquery{T}(t::T)
     query_vars
 end
 
-function takefield(t::Any, )
+# Questions:
+# 1. How are exceptions made and thrown?
+# 2. What is haskey called for Dict?
+# 3. Can I do Nullable{fieldtype} for a datatype in a variable?
+# 4. I might need to convert the value before returning, how? convert function?
 
-function deserialize{T}(json_string::AbstractString)
-    t = T()
+type MandatoryFieldNotPresentException <: Exception end
+
+# Take a value from a Dict, given a symbol and a datatype, and return it.
+# Raises an exception if the field is required and not present in the Dict.
+function takefield(datatype::DataType, sym::Symbol, json::Dict)
+    membertype = fieldtype(datatype, sym)
+    fname = string(sym)
+    println("fname $(fname), sym $(sym), json $(json)")
+    if membertype <: Nullable
+        if haskey(json, fname)
+            return membertype(json[fname])
+        end
+        return membertype()
+    else
+        if !haskey(json, fname)
+            throw(MandatoryFieldNotPresentException())
+        end
+        return json[fname]
+    end
+end
+
+# Deserialize a JSON string into a object of type T.
+# 
+# `T` is the type you want to deserialize into.
+# `json_string` is the JSON string.
+function deserialize{T}(datatype::T, json_string::AbstractString)
+    v = []
     json = JSON.parse(json_string)
-    for sym in fieldnames(T)
+    println("Sybols: $(fieldnames(T))")
+    for sym in fieldnames(datatype)
         println("Symbol: $(sym)")
         key = string(sym)
-        takefield(json, t, sym)
+        value_from_json = takefield(datatype, sym, json)
+        push!(v, value_from_json)
     end
-    t
+    println("Values: $(v)")
+    datatype(v...)
 end

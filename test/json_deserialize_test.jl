@@ -1,4 +1,5 @@
-using FactChecks
+using FactCheck
+import DandelionSlack
 
 type Foo
     foo::AbstractString
@@ -8,11 +9,11 @@ end
 
 facts("Deserialize, with nullable") do
 
-    @fact deserialize(Foo, """{"foo": "abc", "bar": true, "baz": "def"}""") -->
+    @fact DandelionSlack.deserialize(Foo, """{"foo": "abc", "bar": true, "baz": "def"}""") -->
         Foo("abc", true, "def")
-    @fact deserialize(Foo, """{"foo": "abc", "bar": false, "baz": "def"}""") -->
+    @fact DandelionSlack.deserialize(Foo, """{"foo": "abc", "bar": false, "baz": "def"}""") -->
         Foo("abc", false, "def")
-    @fact deserialize(Foo, """{"foo": "abc", "bar": false}""") -->
+    @fact DandelionSlack.deserialize(Foo, """{"foo": "abc", "bar": false}""") -->
         Foo("abc", false, Nullable{AbstractString}())
 
 end
