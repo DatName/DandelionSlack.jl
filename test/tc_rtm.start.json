@@ -1,0 +1,19 @@
+{
+    "test": "MethodCall",
+
+    "request_type": "RtmStart",
+    "request": {
+        "token": "abc"
+    },
+    "http_response": {
+        "code": 200,
+        "body": "{\"ok\": true, \"url\": \"wss:\/\/foobar\"}"
+    },
+    "expected_status": {
+        "ok": true
+    },
+    "expected_response_type": "RtmStartResponse",
+    "expected_response": {
+        "url": "wss:\/\/foobar"
+    }
+}

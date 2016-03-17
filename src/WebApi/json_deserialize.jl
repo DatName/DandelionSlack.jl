@@ -1,5 +1,7 @@
 using JSON
 
+export deserialize
+
 # Deserialize a JSON string to a given type.
 #
 # Example:
@@ -17,7 +19,7 @@ using JSON
 #
 deserialize{T}(::Type{T}, json::AbstractString) = deserialize(T, JSON.parse(json))
 deserialize{T}(::Type{T}, json::Dict) =
-    T(flatten([deserialize_field(T, f, json) for f in fieldnames(T)])...)
+    T([deserialize_field(T, f, json) for f in fieldnames(T)]...)
 deserialize{T<:Integer}(::Type{T}, i::Integer) = T(i)
 deserialize{T<:Integer}(::Type{T}, i::AbstractString) = parse(T, i)
 deserialize{T<:AbstractFloat}(::Type{T}, i::AbstractFloat) = T(i)
