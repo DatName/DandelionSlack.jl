@@ -1,0 +1,17 @@
+{
+    "test": "MethodCall",
+
+    "request_type": "RtmStart",
+    "request": {
+        "token": "abc"
+    },
+    "http_response": {
+        "code": 200,
+        "body": "{\"ok\": false, \"error\": \"ohmygod\"}"
+    },
+    "expected_status": {
+        "ok": false,
+        "error": "ohmygod"
+    },
+    "expected_response_type": "RtmStartResponse"
+}

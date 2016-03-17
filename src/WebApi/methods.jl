@@ -1,6 +1,7 @@
 export Status
 export SlackMethod
 export AbstractHttp
+export RequestException
 
 abstract SlackMethod
 abstract AbstractHttp
@@ -11,15 +12,19 @@ immutable Status
     warnings::Nullable{AbstractString}
 end
 
+type RequestException <: Exception end
+
 function makerequest(m::SlackMethod, http::AbstractHttp)
     query_vars = toquery(m)
     name = method_name(typeof(m))
     url = "https://slack.com/api/$(name)"
-    println(methods(post))
     resp = post(http, url; query=query_vars)
-    println("$(resp)")
     status = deserialize(Status, resp.body)
-    println("Returning status $(status)")
+    if !status.ok
+        throw(RequestException())
+    end
+    response_type = getresponsetype(typeof(m))
 
-    status
+
+    status, deserialize(response_type, resp.body)
 end
