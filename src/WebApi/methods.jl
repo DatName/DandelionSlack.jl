@@ -3,6 +3,8 @@ export SlackMethod
 export AbstractHttp
 export RequestException
 
+import Base.==
+
 abstract SlackMethod
 abstract AbstractHttp
 
@@ -10,6 +12,14 @@ immutable Status
     ok::Bool
     error::Nullable{AbstractString}
     warnings::Nullable{AbstractString}
+end
+
+function nulleq{T}(a::Nullable{T}, b::Nullable{T})
+    !isnull(a) && !isnull(b) && get(a) == get(b) || isnull(a) && isnull(b)
+end
+
+function ==(a::Status, b::Status)
+    nulleq(a.error, b.error) && nulleq(a.warnings, b.warnings) && a.ok == b.ok
 end
 
 type RequestException <: Exception end
@@ -24,7 +34,6 @@ function makerequest(m::SlackMethod, http::AbstractHttp)
         throw(RequestException())
     end
     response_type = getresponsetype(typeof(m))
-
 
     status, deserialize(response_type, resp.body)
 end
