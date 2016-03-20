@@ -37,6 +37,16 @@ function ==(a::Qux, b::Qux)
     a.bar == b.bar && eq_buzz
 end
 
+immutable JsonArray
+    foo::Int
+    bar::Array{Bar}
+    fizz::Array{Int}
+end
+
+function ==(a::JsonArray, b::JsonArray)
+    a.foo == b.foo && a.bar == b.bar && a.fizz == b.fizz
+end
+
 immutable TestResponse
     ok::Bool
     warnings::Nullable{AbstractString}
@@ -68,6 +78,14 @@ facts("JSON deserialization") do
         Foobar(Nullable(Bar(42)))
 end
 
+facts("JSON deserialization of arrays") do
+    json_with_array = """{"foo": 42, "bar":[{"fnord": 17}, {"fnord": 13}], "fizz": [1,2,3]}"""
+    bars = [Bar(17), Bar(13)]
+    @fact DandelionSlack.deserialize(JsonArray, json_with_array) -->
+        JsonArray(42, bars, [1,2,3])
+end
+
 test_response = """{"ok": true, "warnings": "a warning"}"""
 @test DandelionSlack.deserialize(TestResponse, test_response) ==
     TestResponse(true, "a warning", Nullable{AbstractString}())
+

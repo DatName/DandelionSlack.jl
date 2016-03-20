@@ -33,6 +33,16 @@ deserialize{T}(::Type{Nullable{T}}, x) = deserialize(T, x)
 deserialize_field{Tf}(::Type{Tf}, field::AbstractString, json::Dict) = deserialize(Tf, json[field])
 deserialize_field{Tf<:Nullable}(::Type{Tf}, field::AbstractString, json::Dict) =
     haskey(json, field) ? deserialize(Tf, json[field]) : Tf()
+function deserialize_field{Tf}(::Type{Array{Tf}}, field::AbstractString, json::Dict)
+    json_array = json[field]
+    result = Array{Tf, 1}()
+    for e in json_array
+        element_value = deserialize(Tf, e)
+        push!(result, element_value)
+    end
+    result
+end
+
 deserialize_field{T}(::Type{T}, field::Symbol, json::Dict) =
     deserialize_field(fieldtype(T,field), string(field), json)
 
