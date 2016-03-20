@@ -36,6 +36,11 @@ function test_method_error(tc::MethodTestCase)
     @fact_throws DandelionSlack.RequestException DandelionSlack.makerequest(tc.request, mock_http)
 end
 
+function test_http_call_error(tc::MethodTestCase)
+    mock_http = MockHttp(tc.http_response)
+    @fact_throws DandelionSlack.HttpException DandelionSlack.makerequest(tc.request, mock_http)
+end
+
 facts("Slack method tests") do
     testcase_dir = "test/testcases"
     testcase_dir_entries = readdir(testcase_dir)
@@ -51,6 +56,8 @@ facts("Slack method tests") do
                 test_successful_method(tc)
             elseif tc.test == "MethodCallError"
                 test_method_error(tc)
+            elseif tc.test == "HttpCallError"
+                test_http_call_error(tc)
             else
                 throws(Exception("Unexpected test type $(tc.test)"))
             end
