@@ -56,7 +56,7 @@ macro stringinterface(typesym)
     end
 end
 
-@newtype SlackId <: AbstractString
+@newimmutable SlackId <: AbstractString
 @stringinterface SlackId
 
 @newimmutable SlackName <: AbstractString
