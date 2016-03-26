@@ -21,8 +21,17 @@ using DandelionSlack
 facts("Deserializing Slack Tester examples") do
     testcase_dir = "test/slacktester"
     rel_testcase_dir = "slacktester"
-    testcase_dir_entries = readdir(testcase_dir)
     istestcase = x -> isfile(joinpath(testcase_dir, string(x))) && endswith(x, ".json")
+    testcase_dir_entries = []
+
+    try
+        testcase_dir_entries = readdir(testcase_dir)
+    catch ex
+        isa(ex, SystemError) || rethrow(ex)
+        println("No test/slacktester directory found, so not testing Slack examples.")
+        return
+    end
+
     testcases = filter(istestcase, testcase_dir_entries)
 
     for testcase_file in testcases
