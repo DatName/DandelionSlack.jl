@@ -5,10 +5,10 @@ using DandelionSlack
 @newtype NewBar{T <: AbstractString} <: AbstractString
 
 facts("New types") do
-    @fact SlackId("abc") --> SlackId("abc")
-    @fact SlackId("abc") --> not(SlackId("foo"))
+    @fact UserId("abc") --> UserId("abc")
+    @fact UserId("abc") --> not(UserId("foo"))
 
-    takes_id(a::SlackId) = a
+    takes_id(a::UserId) = a
     @fact_throws MethodError takes_id(SlackName("abc"))
 
     newfoo = NewFoo{Int}(1)

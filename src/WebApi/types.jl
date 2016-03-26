@@ -3,7 +3,7 @@ import Base.==
 export Self
 
 immutable Self
-    id::SlackId
+    id::UserId
     name::SlackName
     created::UInt64
     manual_presence::AbstractString
@@ -15,7 +15,7 @@ function ==(a::Self, b::Self)
 end
 
 immutable Team
-    id::SlackId
+    id::TeamId
     name::SlackName
     email_domain::AbstractString
     domain::AbstractString
@@ -30,7 +30,7 @@ immutable Profile
 end
 
 immutable User
-    id::SlackId
+    id::UserId
     name::SlackName
     deleted::Bool
     color::AbstractString
@@ -58,7 +58,7 @@ immutable Purpose
 end
 
 immutable Channel
-    id::SlackId
+    id::ChannelId
     name::SlackName
     is_channel::Bool
     created::UInt64
