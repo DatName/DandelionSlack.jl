@@ -5,7 +5,6 @@ export RequestException
 
 import Base.==
 
-abstract SlackMethod
 abstract AbstractHttp
 
 immutable Status
@@ -25,7 +24,7 @@ end
 type RequestException <: Exception end
 type HttpException <: Exception end
 
-function makerequest(m::SlackMethod, http::AbstractHttp)
+function makerequest(m::Any, http::AbstractHttp)
     query_vars = toquery(m)
     name = method_name(typeof(m))
     url = "https://slack.com/api/$(name)"

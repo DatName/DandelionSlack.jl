@@ -1,7 +1,6 @@
 {
     "test": "MethodCallError",
 
-    "request_type": "RtmStart",
     "request": {
         "token": "abc"
     },
@@ -12,6 +11,5 @@
     "expected_status": {
         "ok": false,
         "error": "ohmygod"
-    },
-    "expected_response_type": "RtmStartResponse"
+    }
 }

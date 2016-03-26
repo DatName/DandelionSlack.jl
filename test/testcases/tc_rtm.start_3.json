@@ -1,7 +1,6 @@
 {
     "test": "MethodCall",
 
-    "request_type": "RtmStart",
     "request": {
         "token": "abc"
     },
@@ -13,7 +12,6 @@
         "ok": true,
         "warnings": "some,warnings"
     },
-    "expected_response_type": "RtmStartResponse",
     "expected_response": {
         "url": "wss:\/\/foobar"
     }

@@ -1,7 +1,6 @@
 {
     "test": "HttpCallError",
 
-    "request_type": "RtmStart",
     "request": {
         "token": "abc"
     },
@@ -11,6 +10,5 @@
     },
     "expected_status": {
         "ok": false
-    },
-    "expected_response_type": "RtmStartResponse"
+    }
 }

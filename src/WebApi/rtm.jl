@@ -1,10 +1,11 @@
-export toparam
-export RtmStart
-export RtmStartResponse
+export
+    toparam,
+    RtmStart,
+    RtmStartResponse
 
 import Base.==
 
-immutable RtmStart <: SlackMethod
+immutable RtmStart
     token::AbstractString
     simple_latest::Nullable{AbstractString}
     no_unreads::Nullable{AbstractString}
@@ -23,9 +24,7 @@ immutable RtmStartResponse
     bots::Array{Bot}
 end
 
-function ==(a::RtmStartResponse, b::RtmStartResponse)
-    return a.url == b.url
-end
+==(a::RtmStartResponse, b::RtmStartResponse) = a.url == b.url
 
 getresponsetype(::Type{RtmStart}) = RtmStartResponse
 method_name(::Type{RtmStart}) = "rtm.start"

@@ -2,19 +2,37 @@ using FactCheck
 using DandelionSlack
 
 import DandelionSlack.post
+import Base.==
+
+##
+## Define a fake method, so we don't have to use an actual Slack method,
+## because they're complex.
+##
+immutable FakeMethod
+    token::UTF8String
+end
+
+immutable FakeMethodResponse
+    url::UTF8String
+end
+
+DandelionSlack.getresponsetype(::Type{FakeMethod}) = FakeMethodResponse
+DandelionSlack.method_name(::Type{FakeMethod}) = "fake.method"
+
+==(a::FakeMethodResponse, b::FakeMethodResponse) = a.url == b.url
 
 type MockHttpResponse
     code::Int
     body::AbstractString
 end
 
+
 type MethodTestCase
     test::AbstractString
-    request_type::AbstractString
-    request::RtmStart
+    request::FakeMethod
     http_response::MockHttpResponse
     expected_status::Status
-    expected_response::Nullable{RtmStartResponse}
+    expected_response::Nullable{FakeMethodResponse}
 end
 
 type MockHttp <: DandelionSlack.AbstractHttp
