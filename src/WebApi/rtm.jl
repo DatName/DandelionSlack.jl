@@ -13,6 +13,14 @@ end
 
 immutable RtmStartResponse
     url::AbstractString
+    self::Self
+    team::Team
+    users::Array{User}
+    channels::Array{Channel}
+    groups::Array{Group}
+    mpims::Array{Mpim}
+    ims::Array{Im}
+    bots::Array{Bot}
 end
 
 function ==(a::RtmStartResponse, b::RtmStartResponse)

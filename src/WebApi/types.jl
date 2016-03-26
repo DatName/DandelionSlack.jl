@@ -57,6 +57,41 @@ immutable Purpose
     last_set::UInt64
 end
 
+immutable Icons
+    image_36::AbstractString
+    image_48::AbstractString
+    image_72::AbstractString
+end
+
+immutable Message
+    type_::AbstractString
+    user::UserId
+    text::AbstractString
+    ts::AbstractString
+end
+
+immutable Mpim
+    id::GroupId
+    name::MpimName
+    is_mpim::Bool
+    is_group::Bool
+    created::Timestamp
+    creator::UserId
+    members::Array{UserId}
+    last_read::AbstractString
+    latest::Message
+    unread_count::UInt64
+    unread_count_display::UInt64
+end
+
+immutable Im
+    id::ImId
+    is_im::Bool
+    user::UserId
+    created::Timestamp
+    is_user_deleted::Bool
+end
+
 immutable Channel
     id::ChannelId
     name::SlackName
@@ -72,4 +107,29 @@ immutable Channel
     last_read::AbstractString
     unread_count::UInt64
     unread_count_display::UInt64
+end
+
+immutable Group
+    id::GroupId
+    name::SlackName
+    is_group::AbstractString
+    created::Timestamp
+    creator::UserId
+    is_archived::Bool
+    is_mpim::Bool
+    members::Array{UserId}
+    topic::Topic
+    purpose::Purpose
+
+    last_read::Nullable{AbstractString}
+    latest::Nullable{Message}
+    unread_count::Nullable{UInt64}
+    unread_count_display::Nullable{UInt64}
+end
+
+immutable Bot
+    id::BotId
+    deleted::Bool
+    name::BotName
+    icons::Nullable{Icons}
 end
