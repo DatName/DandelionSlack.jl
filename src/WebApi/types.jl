@@ -22,11 +22,11 @@ immutable Team
 end
 
 immutable Profile
-    first_name::SlackName
-    last_name::SlackName
+    first_name::Nullable{SlackName}
+    last_name::Nullable{SlackName}
     real_name::SlackName
-    email::AbstractString
-    skype::AbstractString
+    email::Nullable{AbstractString}
+    skype::Nullable{AbstractString}
 end
 
 immutable User
@@ -40,9 +40,9 @@ immutable User
     is_primary_owner::Bool
     is_restricted::Bool
     is_ultra_restricted::Bool
-    has_2fa::Bool
+    has_2fa::Nullable{Bool}
     two_factor_type::Nullable{AbstractString}
-    has_files::Bool
+    has_files::Nullable{Bool}
 end
 
 immutable Topic
@@ -89,7 +89,7 @@ immutable Im
     is_im::Bool
     user::UserId
     created::Timestamp
-    is_user_deleted::Bool
+    is_user_deleted::Nullable{Bool}
 end
 
 immutable Channel
@@ -100,13 +100,13 @@ immutable Channel
     creator::AbstractString
     is_archived::Bool
     is_general::Bool
-    members::Array{AbstractString}
-    topic::Topic
-    purpose::Purpose
+    members::Nullable{Array{AbstractString}}
+    topic::Nullable{Topic}
+    purpose::Nullable{Purpose}
     is_member::Bool
-    last_read::AbstractString
-    unread_count::UInt64
-    unread_count_display::UInt64
+    last_read::Nullable{AbstractString}
+    unread_count::Nullable{UInt64}
+    unread_count_display::Nullable{UInt64}
 end
 
 immutable Group

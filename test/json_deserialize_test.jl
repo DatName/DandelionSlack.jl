@@ -89,3 +89,6 @@ test_response = """{"ok": true, "warnings": "a warning"}"""
 @test DandelionSlack.deserialize(TestResponse, test_response) ==
     TestResponse(true, "a warning", Nullable{AbstractString}())
 
+test_response = """{"ok": true, "warnings": null}"""
+@test DandelionSlack.deserialize(TestResponse, test_response) ==
+    TestResponse(true, Nullable{AbstractString}(), Nullable{AbstractString}())

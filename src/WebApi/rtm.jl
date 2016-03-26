@@ -19,7 +19,7 @@ immutable RtmStartResponse
     users::Array{User}
     channels::Array{Channel}
     groups::Array{Group}
-    mpims::Array{Mpim}
+    mpims::Nullable{Array{Mpim}}
     ims::Array{Im}
     bots::Array{Bot}
 end
