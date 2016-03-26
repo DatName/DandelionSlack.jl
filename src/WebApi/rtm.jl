@@ -1,5 +1,4 @@
 export
-    toparam,
     RtmStart,
     RtmStartResponse
 

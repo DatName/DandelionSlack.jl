@@ -30,3 +30,6 @@ export SlackName
 @stringinterface BotName
 
 @newimmutable Timestamp <: Integer
+
+@newimmutable Token <: AbstractString
+@stringinterface Token
