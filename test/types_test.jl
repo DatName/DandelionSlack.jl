@@ -2,11 +2,11 @@ using FactCheck
 using DandelionSlack
 
 positive_tests = Dict{DataType, Any}(
-    Id => [
-        (Id("foo"), "foo")
+    SlackId => [
+        (SlackId("foo"), "foo")
     ],
     Self => [
-        (Self(Id("fakeid"), Name("My Name"), 123456, "yes"),
+        (Self(SlackId("fakeid"), SlackName("My Name"), 123456, "yes"),
             """{"id": "fakeid", "name": "My Name", "created": 123456, "manual_presence": "yes"}""")
     ]
 )
