@@ -6,52 +6,32 @@ export
     ChannelsArchive,
     ChannelsArchiveResponse
 
-##
-## channels.list
-##
+@slackmethod(ChannelsList, "channels.list",
+    begin
+        exclude_archived::Nullable{Int64}
+    end,
 
-immutable ChannelsList
-    token::Token
-    exclude_archived::Nullable{Int64}
-end
+    begin
+        channels::Array{Channel}
+    end)
 
-immutable ChannelsListResponse
-    channels::Array{Channel}
-end
+@slackmethod(ChannelsInfo, "channels.info",
+    begin
+        channel::ChannelId
+    end,
 
-getresponsetype(::Type{ChannelsList}) = ChannelsListResponse
-method_name(::Type{ChannelsList}) = "channels.list"
+    begin
+        channel::Channel
+    end)
 
-##
-## channels.info
-##
+@slackmethod(ChannelsArchive, "channels.archive",
+    begin
+        channel::ChannelId
+    end,
 
-immutable ChannelsInfo
-    token::Token
-    channel::ChannelId
-end
+    # Note: ChannelsArchiveResponse is intentionally empty, because we get no more information back than
+    # the status.
+    begin
+    end)
 
-immutable ChannelsInfoResponse
-    channel::Channel
-end
-
-getresponsetype(::Type{ChannelsInfo}) = ChannelsInfoResponse
-method_name(::Type{ChannelsInfo}) = "channels.info"
-
-##
-## channels.archive
-##
-
-immutable ChannelsArchive
-    token::Token
-    channel::ChannelId
-end
-
-# Note: ChannelsArchiveResponse is intentionally empty, because we get no more information back than
-# the status.
-immutable ChannelsArchiveResponse
-end
-
-getresponsetype(::Type{ChannelsArchive}) = ChannelsArchiveResponse
-method_name(::Type{ChannelsArchive}) = "channels.archive"
 

@@ -4,14 +4,14 @@ export
 
 import Base.==
 
-immutable RtmStart
-    token::UTF8String
+@slackmethod(RtmStart, "rtm.start",
+begin
     simple_latest::Nullable{UTF8String}
     no_unreads::Nullable{UTF8String}
     mpim_aware::Nullable{UTF8String}
-end
+end,
 
-immutable RtmStartResponse
+begin
     url::UTF8String
     self::Self
     team::Team
@@ -21,9 +21,7 @@ immutable RtmStartResponse
     mpims::Nullable{Array{Mpim}}
     ims::Array{Im}
     bots::Array{Bot}
-end
+end)
 
 ==(a::RtmStartResponse, b::RtmStartResponse) = a.url == b.url
 
-getresponsetype(::Type{RtmStart}) = RtmStartResponse
-method_name(::Type{RtmStart}) = "rtm.start"

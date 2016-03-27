@@ -37,7 +37,7 @@ macro slackmethod(req_type::Symbol, method_name::AbstractString, req_block::Expr
             $(resp_block.args...)
         end
 
-        DandelionSlack.getresponsetype(::Type{$(esc(req_type))}) = $(esc(resp_type))
-        DandelionSlack.method_name(::Type{$(esc(req_type))}) = $method_name
+        $(esc(:getresponsetype))(::Type{$(esc(req_type))}) = $(esc(resp_type))
+        $(esc(:method_name))(::Type{$(esc(req_type))}) = $method_name
     end
 end

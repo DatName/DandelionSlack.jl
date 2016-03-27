@@ -4,18 +4,18 @@ import DandelionSlack.post
 import Base.==
 
 facts("WebApi query") do
-    @fact toquery(RtmStart(utf8("foo"), utf8("1"), utf8("2"), utf8("3"))) --> Dict(
+    @fact toquery(RtmStart(Token(utf8("foo")), utf8("1"), utf8("2"), utf8("3"))) --> Dict(
         "token" => "foo",
         "simple_latest" => "1",
         "no_unreads" => "2",
         "mpim_aware" => "3")
 
-    @fact toquery(RtmStart(utf8("foo"), utf8("1"), utf8("2"), Nullable{UTF8String}())) --> Dict(
+    @fact toquery(RtmStart(Token(utf8("foo")), utf8("1"), utf8("2"), Nullable{UTF8String}())) --> Dict(
         "token" => "foo",
         "simple_latest" => "1",
         "no_unreads" => "2")
 
-    @fact toquery(RtmStart(utf8("foo"), utf8("1"), Nullable{UTF8String}(), Nullable{UTF8String}())) -->
+    @fact toquery(RtmStart(Token(utf8("foo")), utf8("1"), Nullable{UTF8String}(), Nullable{UTF8String}())) -->
         Dict("token" => "foo", "simple_latest" => "1")
 end
 
