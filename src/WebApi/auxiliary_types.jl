@@ -2,34 +2,34 @@ export UserId, ChannelId, TeamId
 export SlackName
 
 
-@newimmutable UserId <: AbstractString
+@newimmutable UserId <: UTF8String
 @stringinterface UserId
 
-@newimmutable ChannelId <: AbstractString
+@newimmutable ChannelId <: UTF8String
 @stringinterface ChannelId
 
-@newimmutable TeamId <: AbstractString
+@newimmutable TeamId <: UTF8String
 @stringinterface TeamId
 
-@newimmutable GroupId <: AbstractString
+@newimmutable GroupId <: UTF8String
 @stringinterface GroupId
 
-@newimmutable ImId <: AbstractString
+@newimmutable ImId <: UTF8String
 @stringinterface ImId
 
-@newimmutable BotId <: AbstractString
+@newimmutable BotId <: UTF8String
 @stringinterface BotId
 
-@newimmutable SlackName <: AbstractString
+@newimmutable SlackName <: UTF8String
 @stringinterface SlackName
 
-@newimmutable MpimName <: AbstractString
+@newimmutable MpimName <: UTF8String
 @stringinterface MpimName
 
-@newimmutable BotName <: AbstractString
+@newimmutable BotName <: UTF8String
 @stringinterface BotName
 
-@newimmutable Timestamp <: Integer
+@newimmutable Timestamp <: UInt64
 
-@newimmutable Token <: AbstractString
+@newimmutable Token <: UTF8String
 @stringinterface Token

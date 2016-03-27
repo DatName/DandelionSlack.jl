@@ -5,14 +5,14 @@ export
 import Base.==
 
 immutable RtmStart
-    token::AbstractString
-    simple_latest::Nullable{AbstractString}
-    no_unreads::Nullable{AbstractString}
-    mpim_aware::Nullable{AbstractString}
+    token::UTF8String
+    simple_latest::Nullable{UTF8String}
+    no_unreads::Nullable{UTF8String}
+    mpim_aware::Nullable{UTF8String}
 end
 
 immutable RtmStartResponse
-    url::AbstractString
+    url::UTF8String
     self::Self
     team::Team
     users::Array{User}

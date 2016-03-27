@@ -6,7 +6,7 @@ immutable Self
     id::UserId
     name::SlackName
     created::UInt64
-    manual_presence::AbstractString
+    manual_presence::UTF8String
 end
 
 function ==(a::Self, b::Self)
@@ -17,23 +17,23 @@ end
 immutable Team
     id::TeamId
     name::SlackName
-    email_domain::AbstractString
-    domain::AbstractString
+    email_domain::UTF8String
+    domain::UTF8String
 end
 
 immutable Profile
     first_name::Nullable{SlackName}
     last_name::Nullable{SlackName}
     real_name::SlackName
-    email::Nullable{AbstractString}
-    skype::Nullable{AbstractString}
+    email::Nullable{UTF8String}
+    skype::Nullable{UTF8String}
 end
 
 immutable User
     id::UserId
     name::SlackName
     deleted::Bool
-    color::AbstractString
+    color::UTF8String
     profile::Profile
     is_admin::Bool
     is_owner::Bool
@@ -41,33 +41,33 @@ immutable User
     is_restricted::Bool
     is_ultra_restricted::Bool
     has_2fa::Nullable{Bool}
-    two_factor_type::Nullable{AbstractString}
+    two_factor_type::Nullable{UTF8String}
     has_files::Nullable{Bool}
 end
 
 immutable Topic
-    value::AbstractString
-    creator::AbstractString
+    value::UTF8String
+    creator::UTF8String
     last_set::UInt64
 end
 
 immutable Purpose
-    value::AbstractString
-    creator::AbstractString
+    value::UTF8String
+    creator::UTF8String
     last_set::UInt64
 end
 
 immutable Icons
-    image_36::AbstractString
-    image_48::AbstractString
-    image_72::AbstractString
+    image_36::UTF8String
+    image_48::UTF8String
+    image_72::UTF8String
 end
 
 immutable Message
-    type_::AbstractString
+    type_::UTF8String
     user::UserId
-    text::AbstractString
-    ts::AbstractString
+    text::UTF8String
+    ts::UTF8String
 end
 
 immutable Mpim
@@ -78,7 +78,7 @@ immutable Mpim
     created::Timestamp
     creator::UserId
     members::Array{UserId}
-    last_read::AbstractString
+    last_read::UTF8String
     latest::Message
     unread_count::UInt64
     unread_count_display::UInt64
@@ -97,14 +97,14 @@ immutable Channel
     name::SlackName
     is_channel::Bool
     created::UInt64
-    creator::AbstractString
+    creator::UTF8String
     is_archived::Bool
     is_general::Bool
-    members::Nullable{Array{AbstractString}}
+    members::Nullable{Array{UTF8String}}
     topic::Nullable{Topic}
     purpose::Nullable{Purpose}
     is_member::Bool
-    last_read::Nullable{AbstractString}
+    last_read::Nullable{UTF8String}
     unread_count::Nullable{UInt64}
     unread_count_display::Nullable{UInt64}
 end
@@ -112,7 +112,7 @@ end
 immutable Group
     id::GroupId
     name::SlackName
-    is_group::AbstractString
+    is_group::UTF8String
     created::Timestamp
     creator::UserId
     is_archived::Bool
@@ -121,7 +121,7 @@ immutable Group
     topic::Topic
     purpose::Purpose
 
-    last_read::Nullable{AbstractString}
+    last_read::Nullable{UTF8String}
     latest::Nullable{Message}
     unread_count::Nullable{UInt64}
     unread_count_display::Nullable{UInt64}

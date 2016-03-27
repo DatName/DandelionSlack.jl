@@ -9,8 +9,8 @@ abstract AbstractHttp
 
 immutable Status
     ok::Bool
-    error::Nullable{AbstractString}
-    warnings::Nullable{AbstractString}
+    error::Nullable{UTF8String}
+    warnings::Nullable{UTF8String}
 end
 
 function nulleq{T}(a::Nullable{T}, b::Nullable{T})
