@@ -3,6 +3,7 @@ using DandelionSlack
 
 @newimmutable NewFoo{T} <: Integer
 @newtype NewBar{T <: AbstractString} <: AbstractString
+@newimmutable NewBaz{T <: UTF8String} <: AbstractString
 
 facts("New types") do
     @fact UserId("abc") --> UserId("abc")
@@ -18,4 +19,9 @@ facts("New types") do
     newbar = NewBar{UTF8String}(utf8("bar"))
     @fact typeof(newbar.v) --> UTF8String
     @fact newbar.v         --> utf8("bar")
+
+    newbaz = NewBaz(utf8("baz"))
+    @fact typeof(newbaz.v) --> UTF8String
+    @fact_throws MethodError NewBaz(1)
+    @fact_throws TypeError NewBaz{Int}(1)
 end
