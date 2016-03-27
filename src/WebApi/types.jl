@@ -1,6 +1,8 @@
 import Base.==
 
-export Self
+export
+    Self,
+    Token
 
 immutable Self
     id::UserId
