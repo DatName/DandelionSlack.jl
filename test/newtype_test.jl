@@ -3,7 +3,14 @@ using DandelionSlack
 
 @newimmutable NewFoo{T} <: Integer
 @newtype NewBar{T <: AbstractString} <: AbstractString
-@newimmutable NewBaz{T <: UTF8String} <: AbstractString
+
+@newimmutable NewBaz <: UTF8String
+@stringinterface NewBaz
+
+@newtype NewQux <: UTF8String
+@stringinterface NewBaz
+
+@newtype NewFnord <: Int64
 
 facts("New types") do
     @fact UserId("abc") --> UserId("abc")
@@ -23,5 +30,13 @@ facts("New types") do
     newbaz = NewBaz(utf8("baz"))
     @fact typeof(newbaz.v) --> UTF8String
     @fact_throws MethodError NewBaz(1)
-    @fact_throws TypeError NewBaz{Int}(1)
+
+    newqux = NewQux(utf8("qux"))
+    @fact typeof(newqux.v) --> UTF8String
+    @fact newqux.v --> utf8("qux")
+    newqux.v = "qux2"
+    @fact newqux.v --> utf8("qux2")
+    @fact_throws MethodError NewBaz(1)
+
+    @fact NewFnord(123).v --> 123
 end
