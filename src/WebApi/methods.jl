@@ -1,11 +1,17 @@
 export Status
 export SlackMethod
 export AbstractHttp
+export AbstractHttpResponse
 export RequestException
+export makerequest
 
 import Base.==
 
 abstract AbstractHttp
+abstract AbstractHttpResponse
+
+statuscode(r::AbstractHttpResponse) = r.status
+text(r::AbstractHttpResponse) = r.text
 
 immutable Status
     ok::Bool
@@ -29,14 +35,15 @@ function makerequest(m::Any, http::AbstractHttp)
     name = method_name(typeof(m))
     url = "https://slack.com/api/$(name)"
     resp = post(http, url; query=query_vars)
-    if resp.code != 200
+    if statuscode(resp) != 200
         throw(HttpException())
     end
-    status = deserialize(Status, resp.body)
+    body = text(resp)
+    status = deserialize(Status, body)
     if !status.ok
         throw(RequestException())
     end
     response_type = getresponsetype(typeof(m))
 
-    status, deserialize(response_type, resp.body)
+    status, deserialize(response_type, body)
 end

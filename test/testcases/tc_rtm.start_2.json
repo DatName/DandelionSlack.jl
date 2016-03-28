@@ -5,8 +5,8 @@
         "token": "abc"
     },
     "http_response": {
-        "code": 200,
-        "body": "{\"ok\": false, \"error\": \"ohmygod\"}"
+        "status": 200,
+        "text": "{\"ok\": false, \"error\": \"ohmygod\"}"
     },
     "expected_status": {
         "ok": false,

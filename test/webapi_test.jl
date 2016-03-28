@@ -35,9 +35,9 @@ DandelionSlack.method_name(::Type{FakeMethod}) = "fake.method"
 ==(a::FakeMethodResponse, b::FakeMethodResponse) = a.url == b.url
 
 # A mock response from Slack.
-type MockHttpResponse
-    code::Int
-    body::AbstractString
+type MockHttpResponse <: AbstractHttpResponse
+    status::Int
+    text::AbstractString
 end
 
 # A test case defines a request, a mock http response, and an expected status

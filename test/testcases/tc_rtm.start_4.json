@@ -5,8 +5,8 @@
         "token": "abc"
     },
     "http_response": {
-        "code": 500,
-        "body": ""
+        "status": 500,
+        "text": ""
     },
     "expected_status": {
         "ok": false

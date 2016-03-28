@@ -5,8 +5,8 @@
         "token": "abc"
     },
     "http_response": {
-        "code": 200,
-        "body": "{\"ok\": true, \"url\": \"wss:\/\/foobar\"}"
+        "status": 200,
+        "text": "{\"ok\": true, \"url\": \"wss:\/\/foobar\"}"
     },
     "expected_status": {
         "ok": true
