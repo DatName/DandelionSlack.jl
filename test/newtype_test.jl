@@ -1,6 +1,3 @@
-using FactCheck
-using DandelionSlack
-
 @newimmutable NewFoo{T} <: Integer
 @newtype NewBar{T <: AbstractString} <: AbstractString
 

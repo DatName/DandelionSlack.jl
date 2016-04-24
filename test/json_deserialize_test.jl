@@ -1,5 +1,3 @@
-import DandelionSlack
-using FactCheck
 import Base.==
 
 input = "{ \"bar\": { \"fnord\": 17 }, \"fizz\": 3.14 }"

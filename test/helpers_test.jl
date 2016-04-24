@@ -1,5 +1,3 @@
-using FactCheck
-using DandelionSlack
 
 @slackmethod(TestMethodMacro, "method.macro",
     begin

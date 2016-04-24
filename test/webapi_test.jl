@@ -1,5 +1,3 @@
-using FactCheck
-using DandelionSlack
 import DandelionSlack.post
 import Base.==
 

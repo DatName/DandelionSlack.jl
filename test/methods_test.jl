@@ -15,9 +15,6 @@
 # will have a companion Julia file which contains the expected deserialized object. It's
 # time consuming to write tests though.
 
-using FactCheck
-using DandelionSlack
-
 facts("Deserializing Slack Tester examples") do
     testcase_dir = "test/slacktester"
     rel_testcase_dir = "slacktester"

@@ -1,6 +1,3 @@
-using FactCheck
-using DandelionSlack
-
 positive_tests = Dict{DataType, Any}(
     UserId => [
         (UserId("foo"), "foo")
