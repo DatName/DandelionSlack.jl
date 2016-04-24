@@ -1,9 +1,12 @@
+using WebSocketClient
+
 abstract RTMEvent
 
 type RTMClient
+    client::AbstractWSClient
     next_id::Int64
 
-    RTMClient() = new(1)
+    RTMClient(client::AbstractWSClient) = new(client, 1)
 end
 
 function send_event(c::RTMClient, event::RTMEvent)
