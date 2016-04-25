@@ -20,6 +20,31 @@ DandelionSlack.serialize(event::FakeEvent) = Dict{AbstractString, Any}("value" =
 test_event_1 = FakeEvent("bar")
 test_event_2 = FakeEvent("baz")
 
+# Also add equality for all events, for testing convenience.
+function ==(a::DandelionSlack.RTMEvent, b::DandelionSlack.RTMEvent)
+    if typeof(a) != typeof(b)
+        return false
+    end
+
+    for name in fieldnames(a)
+        af = getfield(a, name)
+        bf = getfield(b, name)
+
+        if isa(af, Nullable)
+            null_equals = isnull(af) && isnull(bf) || !isnull(af) && !isnull(bf) && get(af) == get(bf)
+            if !null_equals
+                return false
+            end
+        else
+            if af != bf
+                return false
+            end
+        end
+    end
+
+    return true
+end
+
 #
 # Implement a mock WebSocket client that stores the events we send.
 #
@@ -69,7 +94,24 @@ end
 # Tests
 #
 
+facts("RTM event register") do
+    @fact DandelionSlack.find_event("message") --> MessageEvent
+    @fact DandelionSlack.find_event("nosuchevent") --> nothing
+end
+
 facts("RTM events") do
+    context("Event equality for testing") do
+        @fact MessageEvent("a", ChannelId("b")) --> MessageEvent("a", ChannelId("b"))
+        @fact MessageEvent("a", ChannelId("b")) != MessageEvent("b", ChannelId("c")) --> true
+    end
+
+    context("Deserialize events") do
+        message_json = """{"id": 1, "type": "message", "text": "Hello", "channel": "C0"}"""
+        message = DandelionSlack.deserialize(MessageEvent, message_json)
+
+        @fact message --> MessageEvent(utf8("Hello"), ChannelId("C0"))
+    end
+
     context("Increasing message id") do
         ws_client = MockWSClient()
         rtm = DandelionSlack.RTMClient(ws_client)
@@ -105,6 +147,6 @@ facts("RTM events") do
 
         on_text(rtm_ws, utf8("""{"id": 1, "type": "message", "channel": "C0", "text": "Hello"}"""))
 
-        expect_event(mock_handler, 1, Message(utf8("Hello"), ChannelId(utf8("C0"))))
+        expect_event(mock_handler, 1, MessageEvent(utf8("Hello"), ChannelId(utf8("C0"))))
     end
 end

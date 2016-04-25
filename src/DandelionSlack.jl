@@ -12,6 +12,9 @@ include("WebApi/requests.jl")
 
 include("RTM/rtm.jl")
 
+include("RTM/register.jl")
+include("RTM/messages.jl")
+
 include("Util/util.jl")
 
 end # module
