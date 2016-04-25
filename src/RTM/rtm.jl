@@ -1,9 +1,19 @@
+export RTMHandler
+
 using WebSocketClient
 import JSON
+
+#
+# RTMEvent is an abstract type for all messages sent and received as events via Slack RTM.
+#
 
 abstract RTMEvent
 
 serialize(event::RTMEvent) = error("serialize not implemented for $(event)")
+
+#
+# RTMClient is an object for sending events to Slack.
+#
 
 type RTMClient
     client::AbstractWSClient
@@ -25,3 +35,24 @@ function send_event(c::RTMClient, event::RTMEvent)
 end
 
 close(c::RTMClient) = stop(c.client)
+
+#
+# RTMHandler defines an interface for handling RTM events.
+#
+
+abstract RTMHandler
+
+on_event(h::RTMHandler, id::Int64, event::RTMEvent) =
+    error("on_event not implemented for $(h) and/or $(event)")
+
+#
+# RTMWebSocketHandler takes events from a WebSocket connection and converts to RTM events.
+#
+
+type RTMWebSocket <: WebSocketHandler
+    handler::RTMHandler
+end
+
+function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
+
+end

@@ -2,6 +2,10 @@ using WebSocketClient
 import JSON
 import Base.==
 
+#
+# A fake RTM event.
+#
+
 immutable FakeEvent <: DandelionSlack.RTMEvent
     value::UTF8String
 
@@ -15,6 +19,10 @@ DandelionSlack.serialize(event::FakeEvent) = Dict{AbstractString, Any}("value" =
 
 test_event_1 = FakeEvent("bar")
 test_event_2 = FakeEvent("baz")
+
+#
+# Implement a mock WebSocket client that stores the events we send.
+#
 
 type MockWSClient <: AbstractWSClient
     sent::Vector{Dict{Any, Any}}
@@ -35,6 +43,31 @@ function expect_event(c::MockWSClient, id::Int64, value::UTF8String)
 end
 
 expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> no_of_closes
+
+#
+# A mock RTMHandler to test that RTMWebSocket propagates messages correctly.
+#
+
+type MockRTMHandler <: RTMHandler
+    events::Vector{Tuple{Int64, DandelionSlack.RTMEvent}}
+
+    MockRTMHandler() = new([])
+end
+
+DandelionSlack.on_event(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent) =
+    push!(h.events, (id, event))
+
+function expect_event(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent)
+    @fact isempty(h.events) --> false
+
+    actual_id, actual_event = shift!(h.events)
+    @fact actual_id --> id
+    @fact actual_event --> event
+end
+
+#
+# Tests
+#
 
 facts("RTM events") do
     context("Increasing message id") do
@@ -64,5 +97,14 @@ facts("RTM events") do
         rtm = DandelionSlack.RTMClient(ws_client)
         DandelionSlack.close(rtm)
         expect_close(ws_client)
+    end
+
+    context("Propagate events from WebSocket to RTM") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+
+        on_text(rtm_ws, utf8("""{"id": 1, "type": "message", "channel": "C0", "text": "Hello"}"""))
+
+        expect_event(mock_handler, 1, Message(utf8("Hello"), ChannelId(utf8("C0"))))
     end
 end
