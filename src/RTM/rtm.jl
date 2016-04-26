@@ -79,8 +79,8 @@ function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
     event_type = find_event(dict["type"])
     event = deserialize(event_type, dict)
 
-    if haskey(dict, "replyto")
-        message_id = dict["replyto"]
+    if haskey(dict, "reply_to")
+        message_id = dict["reply_to"]
         on_reply(rtm.handler, message_id, event)
     else
         on_event(rtm.handler, event)

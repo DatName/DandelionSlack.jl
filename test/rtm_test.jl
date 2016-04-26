@@ -170,7 +170,7 @@ facts("RTM events") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"replyto": 1, "type": "hello"}"""))
+        on_text(rtm_ws, utf8("""{"reply_to": 1, "type": "hello"}"""))
 
         expect_event(mock_handler, 1, HelloEvent())
     end
@@ -179,7 +179,7 @@ facts("RTM events") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"replyto": 1}"""))
+        on_text(rtm_ws, utf8("""{"reply_to": 1}"""))
 
         expect_error(mock_handler, :missing_type)
     end
@@ -188,7 +188,7 @@ facts("RTM events") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"replyto" foobarbaz"""))
+        on_text(rtm_ws, utf8("""{"reply_to" foobarbaz"""))
 
         expect_error(mock_handler, :invalid_json)
     end
