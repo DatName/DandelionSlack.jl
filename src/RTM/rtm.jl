@@ -55,9 +55,14 @@ end
 
 function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
     dict = JSON.parse(text)
-    # TODO: Handle error when required fields like type and id are missing
+    # TODO: Handle error when required fields like type is missing
     event_type = find_event(dict["type"])
-    message_id = dict["id"]
     event = deserialize(event_type, dict)
-    on_event(rtm.handler, message_id, event)
+
+    if haskey(dict, "id")
+        message_id = dict["id"]
+        on_event(rtm.handler, message_id, event)
+    else
+        on_event(rtm.handler, event)
+    end
 end

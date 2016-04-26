@@ -1,4 +1,7 @@
-export MessageEvent
+export HelloEvent,
+       MessageEvent
+
+@slackevent(HelloEvent, "hello", begin end)
 
 @slackevent(MessageEvent, "message",
     begin

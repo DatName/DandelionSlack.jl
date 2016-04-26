@@ -75,12 +75,16 @@ expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> n
 
 type MockRTMHandler <: RTMHandler
     events::Vector{Tuple{Int64, DandelionSlack.RTMEvent}}
+    no_id_events::Vector{DandelionSlack.RTMEvent}
 
-    MockRTMHandler() = new([])
+    MockRTMHandler() = new([], [])
 end
 
 DandelionSlack.on_event(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent) =
     push!(h.events, (id, event))
+
+DandelionSlack.on_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent) =
+    push!(h.no_id_events, event)
 
 function expect_event(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent)
     @fact isempty(h.events) --> false
@@ -88,6 +92,11 @@ function expect_event(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEve
     actual_id, actual_event = shift!(h.events)
     @fact actual_id --> id
     @fact actual_event --> event
+end
+
+function expect_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent)
+    @fact isempty(h.no_id_events) --> false
+    @fact shift!(h.no_id_events) --> event
 end
 
 #
@@ -148,5 +157,14 @@ facts("RTM events") do
         on_text(rtm_ws, utf8("""{"id": 1, "type": "message", "channel": "C0", "text": "Hello"}"""))
 
         expect_event(mock_handler, 1, MessageEvent(utf8("Hello"), ChannelId(utf8("C0"))))
+    end
+
+    context("Events without id") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+
+        on_text(rtm_ws, utf8("""{"type": "hello"}"""))
+
+        expect_event(mock_handler, HelloEvent())
     end
 end
