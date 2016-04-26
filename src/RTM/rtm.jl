@@ -43,7 +43,7 @@ close(c::RTMClient) = stop(c.client)
 abstract RTMHandler
 
 on_reply(h::RTMHandler, id::Int64, event::RTMEvent) =
-    error("on_event not implemented for $(h) and/or $(event)")
+    error("on_reply not implemented for $(h) and/or $(event)")
 
 on_event(h::RTMHandler, event::RTMEvent) =
     error("on_event not implemented for $(h) and/or $(event)")
