@@ -1,7 +1,7 @@
 using WebSocketClient
 import JSON
 import Base.==
-import DandelionSlack.on_event
+import DandelionSlack: on_event, on_reply, on_error
 
 #
 # A fake RTM event.
@@ -77,15 +77,16 @@ expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> n
 type MockRTMHandler <: RTMHandler
     reply_events::Vector{Tuple{Int64, DandelionSlack.RTMEvent}}
     events::Vector{DandelionSlack.RTMEvent}
+    errors::Vector{Symbol}
 
-    MockRTMHandler() = new([], [])
+    MockRTMHandler() = new([], [], [])
 end
 
-DandelionSlack.on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent) =
+on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent) =
     push!(h.reply_events, (id, event))
 
-on_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent) =
-    push!(h.events, event)
+on_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent) = push!(h.events, event)
+on_error(h::MockRTMHandler, reason::Symbol, text::UTF8String) = push!(h.errors, reason)
 
 function expect_event(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent)
     @fact isempty(h.reply_events) --> false
@@ -98,6 +99,11 @@ end
 function expect_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent)
     @fact isempty(h.events) --> false
     @fact shift!(h.events) --> event
+end
+
+function expect_error(h::MockRTMHandler, reason::Symbol)
+    @fact isempty(h.errors) --> false
+    @fact shift!(h.errors) --> reason
 end
 
 #
@@ -167,5 +173,23 @@ facts("RTM events") do
         on_text(rtm_ws, utf8("""{"replyto": 1, "type": "hello"}"""))
 
         expect_event(mock_handler, 1, HelloEvent())
+    end
+
+    context("Missing type key") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+
+        on_text(rtm_ws, utf8("""{"replyto": 1}"""))
+
+        expect_error(mock_handler, :missing_type)
+    end
+
+    context("Invalid JSON") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+
+        on_text(rtm_ws, utf8("""{"replyto" foobarbaz"""))
+
+        expect_error(mock_handler, :invalid_json)
     end
 end
