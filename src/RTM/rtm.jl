@@ -42,7 +42,10 @@ close(c::RTMClient) = stop(c.client)
 
 abstract RTMHandler
 
-on_event(h::RTMHandler, id::Int64, event::RTMEvent) =
+on_reply(h::RTMHandler, id::Int64, event::RTMEvent) =
+    error("on_event not implemented for $(h) and/or $(event)")
+
+on_event(h::RTMHandler, event::RTMEvent) =
     error("on_event not implemented for $(h) and/or $(event)")
 
 #
@@ -59,9 +62,9 @@ function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
     event_type = find_event(dict["type"])
     event = deserialize(event_type, dict)
 
-    if haskey(dict, "id")
-        message_id = dict["id"]
-        on_event(rtm.handler, message_id, event)
+    if haskey(dict, "replyto")
+        message_id = dict["replyto"]
+        on_reply(rtm.handler, message_id, event)
     else
         on_event(rtm.handler, event)
     end
