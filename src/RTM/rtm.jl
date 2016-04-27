@@ -1,4 +1,5 @@
-export RTMHandler
+export RTMHandler,
+       rtm_connect
 
 using WebSocketClient
 import JSON
@@ -10,31 +11,6 @@ import JSON
 abstract RTMEvent
 
 serialize(event::RTMEvent) = error("serialize not implemented for $(event)")
-
-#
-# RTMClient is an object for sending events to Slack.
-#
-
-type RTMClient
-    client::AbstractWSClient
-    next_id::Int64
-
-    RTMClient(client::AbstractWSClient) = new(client, 1)
-end
-
-function send_event(c::RTMClient, event::RTMEvent)
-    this_id = c.next_id
-    c.next_id += 1
-
-    dict = serialize(event)
-    dict["id"] = this_id
-    text = utf8(JSON.json(dict))
-    send_text(c.client, text)
-
-    this_id
-end
-
-close(c::RTMClient) = stop(c.client)
 
 #
 # RTMHandler defines an interface for handling RTM events.
@@ -85,4 +61,36 @@ function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
     else
         on_event(rtm.handler, event)
     end
+end
+
+#
+# RTMClient is an object for sending events to Slack.
+#
+
+type RTMClient
+    client::AbstractWSClient
+    next_id::Int64
+
+    RTMClient(handler::RTMHandler, client::AbstractWSClient) = new(client, 1)
+end
+
+function send_event(c::RTMClient, event::RTMEvent)
+    this_id = c.next_id
+    c.next_id += 1
+
+    dict = serialize(event)
+    dict["id"] = this_id
+    text = utf8(JSON.json(dict))
+    send_text(c.client, text)
+
+    this_id
+end
+
+close(c::RTMClient) = stop(c.client)
+
+function rtm_connect(uri::Requests.URI, handler::RTMHandler;
+        ws_client_factory=WebSocketClient.WSClient)
+
+    rtm_ws = RTMWebSocket(handler)
+    ws_client = ws_client_factory(uri, rtm_ws)
 end

@@ -60,7 +60,7 @@ end
 WebSocketClient.stop(c::MockWSClient)                     = c.closed_called += 1
 WebSocketClient.send_text(c::MockWSClient, s::UTF8String) = push!(c.sent, JSON.parse(s))
 
-function expect_event(c::MockWSClient, id::Int64, value::UTF8String)
+function expect_sent_event(c::MockWSClient, id::Int64, value::UTF8String)
     @fact c.sent --> x -> !isempty(x)
 
     parsed = shift!(c.sent)
@@ -88,7 +88,7 @@ on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent) =
 on_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent) = push!(h.events, event)
 on_error(h::MockRTMHandler, reason::Symbol, text::UTF8String) = push!(h.errors, reason)
 
-function expect_event(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent)
+function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent)
     @fact isempty(h.reply_events) --> false
 
     actual_id, actual_event = shift!(h.reply_events)
@@ -130,7 +130,8 @@ facts("RTM events") do
 
     context("Increasing message id") do
         ws_client = MockWSClient()
-        rtm = DandelionSlack.RTMClient(ws_client)
+        mock_handler = MockRTMHandler()
+        rtm = DandelionSlack.RTMClient(mock_handler, ws_client)
 
         message_id_1 = DandelionSlack.send_event(rtm, FakeEvent())
         message_id_2 = DandelionSlack.send_event(rtm, FakeEvent())
@@ -141,18 +142,20 @@ facts("RTM events") do
 
     context("Sending events") do
         ws_client = MockWSClient()
-        rtm = DandelionSlack.RTMClient(ws_client)
+        mock_handler = MockRTMHandler()
+        rtm = DandelionSlack.RTMClient(mock_handler, ws_client)
 
         id_1 = DandelionSlack.send_event(rtm, test_event_1)
         id_2 = DandelionSlack.send_event(rtm, test_event_2)
 
-        expect_event(ws_client, id_1, test_event_1.value)
-        expect_event(ws_client, id_2, test_event_2.value)
+        expect_sent_event(ws_client, id_1, test_event_1.value)
+        expect_sent_event(ws_client, id_2, test_event_2.value)
     end
 
     context("Send close on user request") do
         ws_client = MockWSClient()
-        rtm = DandelionSlack.RTMClient(ws_client)
+        mock_handler = MockRTMHandler()
+        rtm = DandelionSlack.RTMClient(mock_handler, ws_client)
         DandelionSlack.close(rtm)
         expect_close(ws_client)
     end
@@ -170,9 +173,10 @@ facts("RTM events") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"reply_to": 1, "type": "hello"}"""))
+        on_text(rtm_ws,
+            utf8("""{"reply_to": 1, "type": "message", "text": "Hello", "channel": "C0"}"""))
 
-        expect_event(mock_handler, 1, HelloEvent())
+        expect_reply(mock_handler, 1, MessageEvent(utf8("Hello"), ChannelId("C0")))
     end
 
     context("Missing type key") do
@@ -191,5 +195,28 @@ facts("RTM events") do
         on_text(rtm_ws, utf8("""{"reply_to" foobarbaz"""))
 
         expect_error(mock_handler, :invalid_json)
+    end
+end
+
+facts("RTM integration") do
+    context("Send and receive events") do
+        url = Requests.URI("wss://some/url/to/rtm")
+        actual_url = nothing
+        mock_ws = MockWSClient()
+        mock_handler = MockRTMHandler()
+        rtm_ws = nothing
+        function ws_client_factory(uri, handler)
+            actual_url = url
+            rtm_ws = handler
+            mock_ws
+        end
+
+        rtm_client = rtm_connect(url, mock_handler; ws_client_factory=ws_client_factory)
+
+        # These are fake events from the WebSocket
+        on_text(rtm_ws, utf8("""{"type": "hello"}"""))
+
+        # These are the events we expect.
+        expect_event(mock_handler, HelloEvent())
     end
 end
