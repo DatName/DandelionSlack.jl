@@ -7,7 +7,7 @@ import DandelionSlack: on_event, on_reply, on_error
 # A fake RTM event.
 #
 
-immutable FakeEvent <: DandelionSlack.RTMEvent
+immutable FakeEvent <: DandelionSlack.OutgoingEvent
     value::UTF8String
 
     FakeEvent() = new("")
@@ -22,29 +22,36 @@ test_event_1 = FakeEvent("bar")
 test_event_2 = FakeEvent("baz")
 
 # Also add equality for all events, for testing convenience.
-function ==(a::DandelionSlack.RTMEvent, b::DandelionSlack.RTMEvent)
-    if typeof(a) != typeof(b)
-        return false
-    end
-
-    for name in fieldnames(a)
-        af = getfield(a, name)
-        bf = getfield(b, name)
-
-        if isa(af, Nullable)
-            null_equals = isnull(af) && isnull(bf) || !isnull(af) && !isnull(bf) && get(af) == get(bf)
-            if !null_equals
+macro eventeq(r::Expr)
+    quote
+        function $(esc(:(==)))(a::$r, b::$r)
+            if typeof(a) != typeof(b)
                 return false
             end
-        else
-            if af != bf
-                return false
+
+            for name in fieldnames(a)
+                af = getfield(a, name)
+                bf = getfield(b, name)
+
+                if isa(af, Nullable)
+                    null_equals = isnull(af) && isnull(bf) || !isnull(af) && !isnull(bf) && get(af) == get(bf)
+                    if !null_equals
+                        return false
+                    end
+                else
+                    if af != bf
+                        return false
+                    end
+                end
             end
+
+            return true
         end
     end
-
-    return true
 end
+
+@eventeq DandelionSlack.OutgoingEvent
+@eventeq DandelionSlack.Event
 
 #
 # Implement a mock WebSocket client that stores the events we send.
@@ -75,20 +82,20 @@ expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> n
 #
 
 type MockRTMHandler <: RTMHandler
-    reply_events::Vector{Tuple{Int64, DandelionSlack.RTMEvent}}
-    events::Vector{DandelionSlack.RTMEvent}
+    reply_events::Vector{Tuple{Int64, DandelionSlack.Event}}
+    events::Vector{DandelionSlack.Event}
     errors::Vector{Symbol}
 
     MockRTMHandler() = new([], [], [])
 end
 
-on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent) =
+on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.Event) =
     push!(h.reply_events, (id, event))
 
-on_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent) = push!(h.events, event)
+on_event(h::MockRTMHandler, event::DandelionSlack.Event) = push!(h.events, event)
 on_error(h::MockRTMHandler, reason::Symbol, text::UTF8String) = push!(h.errors, reason)
 
-function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEvent)
+function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.MessageEvent)
     @fact isempty(h.reply_events) --> false
 
     actual_id, actual_event = shift!(h.reply_events)
@@ -96,7 +103,7 @@ function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.RTMEve
     @fact actual_event --> event
 end
 
-function expect_event(h::MockRTMHandler, event::DandelionSlack.RTMEvent)
+function expect_event(h::MockRTMHandler, event::DandelionSlack.Event)
     @fact isempty(h.events) --> false
     @fact shift!(h.events) --> event
 end
@@ -119,6 +126,8 @@ facts("RTM events") do
     context("Event equality for testing") do
         @fact MessageEvent("a", ChannelId("b")) --> MessageEvent("a", ChannelId("b"))
         @fact MessageEvent("a", ChannelId("b")) != MessageEvent("b", ChannelId("c")) --> true
+        @fact OutgoingMessageEvent("a", ChannelId("b")) --> OutgoingMessageEvent("a", ChannelId("b"))
+        @fact OutgoingMessageEvent("a", ChannelId("b")) != OutgoingMessageEvent("b", ChannelId("c")) --> true
     end
 
     context("Deserialize events") do

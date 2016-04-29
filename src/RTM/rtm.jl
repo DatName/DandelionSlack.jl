@@ -5,23 +5,15 @@ using WebSocketClient
 import JSON
 
 #
-# RTMEvent is an abstract type for all messages sent and received as events via Slack RTM.
-#
-
-abstract RTMEvent
-
-serialize(event::RTMEvent) = error("serialize not implemented for $(event)")
-
-#
 # RTMHandler defines an interface for handling RTM events.
 #
 
 abstract RTMHandler
 
-on_reply(h::RTMHandler, id::Int64, event::RTMEvent) =
+on_reply(h::RTMHandler, id::Int64, event::Event) =
     error("on_reply not implemented for $(h) and/or $(event)")
 
-on_event(h::RTMHandler, event::RTMEvent) =
+on_event(h::RTMHandler, event::Event) =
     error("on_event not implemented for $(h) and/or $(event)")
 
 on_error(h::RTMHandler, reason::Symbol, text::UTF8String) =
@@ -74,7 +66,7 @@ type RTMClient
     RTMClient(handler::RTMHandler, client::AbstractWSClient) = new(client, 1)
 end
 
-function send_event(c::RTMClient, event::RTMEvent)
+function send_event(c::RTMClient, event::OutgoingEvent)
     this_id = c.next_id
     c.next_id += 1
 

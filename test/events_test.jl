@@ -1,6 +1,6 @@
 facts("Outgoing events") do
     context("OutgoingMessageEvent") do
-        s = serialize(OutgoingMessageEvent(utf8("Hello"), ChannelId("C0")))
+        s = DandelionSlack.serialize(OutgoingMessageEvent(utf8("Hello"), ChannelId("C0")))
         @fact s["type"] --> utf8("message")
         @fact s["text"] --> utf8("Hello")
         @fact s["channel"] --> ChannelId("C0")
@@ -9,7 +9,7 @@ facts("Outgoing events") do
     end
 
     context("OutgoingPingEvent") do
-        s = serialize(OutgoingPingEvent())
+        s = DandelionSlack.serialize(DandelionSlack.OutgoingPingEvent())
         @fact s["type"] --> utf8("ping")
         @fact haskey(s, "id") --> false
     end
