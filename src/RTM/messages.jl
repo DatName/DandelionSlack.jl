@@ -1,6 +1,7 @@
 export HelloEvent,
        OutgoingMessageEvent,
-       MessageEvent
+       MessageEvent,
+       MessageAckEvent
 
 @slackevent(HelloEvent, "hello", begin end)
 
@@ -16,4 +17,11 @@ export HelloEvent,
     begin
         text::UTF8String
         channel::ChannelId
+    end)
+
+@slackevent(MessageAckEvent, "message_ack",
+    begin
+        text::UTF8String
+        channel::UTF8String
+        ok::Bool
     end)

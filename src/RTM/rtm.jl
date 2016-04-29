@@ -40,8 +40,15 @@ function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
     end
 
     if !haskey(dict, "type")
-        on_error(rtm.handler, :missing_type, text)
-        return
+        # Special case: A message ack does not have a type property, but is instead identified by
+        # having a text and a reply_to property.
+        # We fake a type "message_ack" for it, so it's handled by the same code as everything else.
+        if haskey(dict, "text") && haskey(dict, "reply_to")
+            dict["type"] = utf8("message_ack")
+        else
+            on_error(rtm.handler, :missing_type, text)
+            return
+        end
     end
 
     event_type = find_event(dict["type"])

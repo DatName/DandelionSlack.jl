@@ -95,7 +95,7 @@ on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.Event) =
 on_event(h::MockRTMHandler, event::DandelionSlack.Event) = push!(h.events, event)
 on_error(h::MockRTMHandler, reason::Symbol, text::UTF8String) = push!(h.errors, reason)
 
-function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.MessageEvent)
+function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.Event)
     @fact isempty(h.reply_events) --> false
 
     actual_id, actual_event = shift!(h.reply_events)
@@ -178,17 +178,17 @@ facts("RTM events") do
         expect_event(mock_handler, MessageEvent(utf8("Hello"), ChannelId(utf8("C0"))))
     end
 
-    context("Reply event") do
+    context("Message ack event") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
         on_text(rtm_ws,
-            utf8("""{"reply_to": 1, "type": "message", "text": "Hello", "channel": "C0"}"""))
+            utf8("""{"reply_to": 1, "ok": true, "text": "Hello", "channel": "C0"}"""))
 
-        expect_reply(mock_handler, 1, MessageEvent(utf8("Hello"), ChannelId("C0")))
+        expect_reply(mock_handler, 1, MessageAckEvent(utf8("Hello"), ChannelId("C0"), true))
     end
 
-    context("Missing type key") do
+    context("Missing type key and not message ack") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
