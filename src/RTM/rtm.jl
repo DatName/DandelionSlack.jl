@@ -1,5 +1,6 @@
 export RTMHandler,
-       rtm_connect
+       rtm_connect,
+       send_event
 
 using WebSocketClient
 import JSON
@@ -70,7 +71,7 @@ type RTMClient
     client::AbstractWSClient
     next_id::Int64
 
-    RTMClient(handler::RTMHandler, client::AbstractWSClient) = new(client, 1)
+    RTMClient(client::AbstractWSClient) = new(client, 1)
 end
 
 function send_event(c::RTMClient, event::OutgoingEvent)
@@ -92,4 +93,6 @@ function rtm_connect(uri::Requests.URI, handler::RTMHandler;
 
     rtm_ws = RTMWebSocket(handler)
     ws_client = ws_client_factory(uri, rtm_ws)
+
+    RTMClient(ws_client)
 end

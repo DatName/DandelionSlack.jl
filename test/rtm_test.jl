@@ -67,12 +67,11 @@ end
 WebSocketClient.stop(c::MockWSClient)                     = c.closed_called += 1
 WebSocketClient.send_text(c::MockWSClient, s::UTF8String) = push!(c.sent, JSON.parse(s))
 
-function expect_sent_event(c::MockWSClient, id::Int64, value::UTF8String)
+function expect_sent_event(c::MockWSClient, expected::Dict{Any,Any})
     @fact c.sent --> x -> !isempty(x)
 
     parsed = shift!(c.sent)
-    @fact parsed["id"] --> id
-    @fact parsed["value"] --> value
+    @fact parsed --> expected
 end
 
 expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> no_of_closes
@@ -139,8 +138,7 @@ facts("RTM events") do
 
     context("Increasing message id") do
         ws_client = MockWSClient()
-        mock_handler = MockRTMHandler()
-        rtm = DandelionSlack.RTMClient(mock_handler, ws_client)
+        rtm = DandelionSlack.RTMClient(ws_client)
 
         message_id_1 = DandelionSlack.send_event(rtm, FakeEvent())
         message_id_2 = DandelionSlack.send_event(rtm, FakeEvent())
@@ -151,20 +149,18 @@ facts("RTM events") do
 
     context("Sending events") do
         ws_client = MockWSClient()
-        mock_handler = MockRTMHandler()
-        rtm = DandelionSlack.RTMClient(mock_handler, ws_client)
+        rtm = DandelionSlack.RTMClient(ws_client)
 
         id_1 = DandelionSlack.send_event(rtm, test_event_1)
         id_2 = DandelionSlack.send_event(rtm, test_event_2)
 
-        expect_sent_event(ws_client, id_1, test_event_1.value)
-        expect_sent_event(ws_client, id_2, test_event_2.value)
+        expect_sent_event(ws_client, Dict{Any,Any}("id" => id_1, "value" => test_event_1.value))
+        expect_sent_event(ws_client, Dict{Any,Any}("id" => id_2, "value" => test_event_2.value))
     end
 
     context("Send close on user request") do
         ws_client = MockWSClient()
-        mock_handler = MockRTMHandler()
-        rtm = DandelionSlack.RTMClient(mock_handler, ws_client)
+        rtm = DandelionSlack.RTMClient(ws_client)
         DandelionSlack.close(rtm)
         expect_close(ws_client)
     end
@@ -225,7 +221,15 @@ facts("RTM integration") do
         # These are fake events from the WebSocket
         on_text(rtm_ws, utf8("""{"type": "hello"}"""))
 
+        # Send a message, and then we fake a reply to it.
+        m_id1 = send_event(rtm_client, OutgoingMessageEvent("Hello", ChannelId("C0")))
+        on_text(rtm_ws,
+            utf8("""{"ok": true, "reply_to": $(m_id1), "text": "Hello", "channel": "C0"}"""))
+
         # These are the events we expect.
         expect_event(mock_handler, HelloEvent())
+        expect_sent_event(mock_ws, Dict{Any,Any}(
+            "id" => 1, "type" => "message", "text" => "Hello", "channel" => "C0"))
+        expect_reply(mock_handler, m_id1, MessageAckEvent("Hello", ChannelId("C0"), true))
     end
 end
