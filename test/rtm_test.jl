@@ -53,6 +53,10 @@ end
 @eventeq DandelionSlack.OutgoingEvent
 @eventeq DandelionSlack.Event
 
+function ==(a::RTMError, b::RTMError)
+    return a.code == b.code && a.msg == b.msg
+end
+
 #
 # Implement a mock WebSocket client that stores the events we send.
 #
@@ -206,6 +210,17 @@ facts("RTM events") do
 
         expect_error(mock_handler, :invalid_json)
     end
+
+    context("Error event from Slack") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+
+        on_text(rtm_ws,
+            utf8("""{"type": "error", "error": {"code": 1, "msg": "Reason"}}"""))
+
+        expect_event(mock_handler, ErrorEvent(RTMError(1, "Reason")))
+    end
+
 end
 
 facts("RTM integration") do

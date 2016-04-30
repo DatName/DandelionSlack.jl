@@ -11,9 +11,11 @@ include("WebApi/channels.jl")
 include("WebApi/requests.jl")
 
 include("RTM/events.jl")
-include("RTM/rtm.jl")
 include("RTM/register.jl")
+include("RTM/misc_events.jl")
 include("RTM/messages.jl")
+
+include("RTM/rtm.jl")
 
 include("Util/util.jl")
 

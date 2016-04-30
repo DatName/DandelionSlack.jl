@@ -17,6 +17,8 @@ on_reply(h::RTMHandler, id::Int64, event::Event) =
 on_event(h::RTMHandler, event::Event) =
     error("on_event not implemented for $(h) and/or $(event)")
 
+# on error is called when there is a problem with receiving the message, such as invalid JSON.
+# This is not an error sent by Slack, but an error caught in this code.
 on_error(h::RTMHandler, reason::Symbol, text::UTF8String) =
     error("on_error not implemented for $(h)")
 

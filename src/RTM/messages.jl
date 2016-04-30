@@ -1,11 +1,6 @@
-export HelloEvent,
-       OutgoingMessageEvent,
+export OutgoingMessageEvent,
        MessageEvent,
        MessageAckEvent
-
-@slackevent(HelloEvent, "hello", begin end)
-
-@slackoutevent(OutgoingPingEvent, "ping", begin end)
 
 @slackoutevent(OutgoingMessageEvent, "message",
     begin
