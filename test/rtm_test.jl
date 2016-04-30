@@ -123,17 +123,20 @@ end
 
 facts("RTM events") do
     context("Event equality for testing") do
-        @fact MessageEvent("a", ChannelId("b")) --> MessageEvent("a", ChannelId("b"))
-        @fact MessageEvent("a", ChannelId("b")) != MessageEvent("b", ChannelId("c")) --> true
+        @fact MessageEvent("a", ChannelId("b"), UserId("U0"), EventTimestamp("123")) -->
+            MessageEvent("a", ChannelId("b"), UserId("U0"), EventTimestamp("123"))
+        @fact MessageEvent("a", ChannelId("b"), UserId("U0"), EventTimestamp("123")) !=
+            MessageEvent("b", ChannelId("c"), UserId("U0"), EventTimestamp("123")) --> true
         @fact OutgoingMessageEvent("a", ChannelId("b")) --> OutgoingMessageEvent("a", ChannelId("b"))
         @fact OutgoingMessageEvent("a", ChannelId("b")) != OutgoingMessageEvent("b", ChannelId("c")) --> true
     end
 
     context("Deserialize events") do
-        message_json = """{"id": 1, "type": "message", "text": "Hello", "channel": "C0"}"""
+        message_json = """{"id": 1, "type": "message", "text": "Hello",
+            "channel": "C0", "user": "U0", "ts": "123"}"""
         message = DandelionSlack.deserialize(MessageEvent, message_json)
 
-        @fact message --> MessageEvent(utf8("Hello"), ChannelId("C0"))
+        @fact message --> MessageEvent(utf8("Hello"), ChannelId("C0"), UserId("U0"), EventTimestamp("123"))
     end
 
     context("Increasing message id") do
@@ -169,9 +172,11 @@ facts("RTM events") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"type": "message", "channel": "C0", "text": "Hello"}"""))
+        on_text(rtm_ws, utf8("""{"type": "message", "channel": "C0",
+            "text": "Hello", "user": "U0", "ts": "123"}"""))
 
-        expect_event(mock_handler, MessageEvent(utf8("Hello"), ChannelId(utf8("C0"))))
+        expect_event(mock_handler,
+            MessageEvent(utf8("Hello"), ChannelId(utf8("C0")), UserId("U0"), EventTimestamp("123")))
     end
 
     context("Message ack event") do
@@ -220,14 +225,21 @@ facts("RTM integration") do
 
         # These are fake events from the WebSocket
         on_text(rtm_ws, utf8("""{"type": "hello"}"""))
+        on_text(rtm_ws, utf8(
+            """{"type": "message", "text": "A message", "channel": "C0", "user": "U0", "ts": "12345.6789"}"""))
 
         # Send a message, and then we fake a reply to it.
         m_id1 = send_event(rtm_client, OutgoingMessageEvent("Hello", ChannelId("C0")))
         on_text(rtm_ws,
             utf8("""{"ok": true, "reply_to": $(m_id1), "text": "Hello", "channel": "C0"}"""))
 
+        # We don't expect any errors
+        @fact mock_handler.errors --> isempty
+
         # These are the events we expect.
         expect_event(mock_handler, HelloEvent())
+        expect_event(mock_handler,
+            MessageEvent("A message", ChannelId("C0"), UserId("U0"), EventTimestamp("12345.6789")))
         expect_sent_event(mock_ws, Dict{Any,Any}(
             "id" => 1, "type" => "message", "text" => "Hello", "channel" => "C0"))
         expect_reply(mock_handler, m_id1, MessageAckEvent("Hello", ChannelId("C0"), true))

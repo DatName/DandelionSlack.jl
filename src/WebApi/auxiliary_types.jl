@@ -1,4 +1,4 @@
-export UserId, ChannelId, TeamId
+export UserId, ChannelId, TeamId, EventTimestamp
 export SlackName
 
 
@@ -33,3 +33,6 @@ export SlackName
 
 @newimmutable Token <: UTF8String
 @stringinterface Token
+
+@newimmutable EventTimestamp <: UTF8String
+@stringinterface EventTimestamp

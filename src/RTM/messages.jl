@@ -17,6 +17,8 @@ export HelloEvent,
     begin
         text::UTF8String
         channel::ChannelId
+        user::UserId
+        ts::EventTimestamp
     end)
 
 @slackevent(MessageAckEvent, "message_ack",
