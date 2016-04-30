@@ -1,3 +1,29 @@
+type MockThrottlingWSClient <: AbstractWSClient
+    sent::Vector{UTF8String}
+    channel_sent::Vector{WebSocketClient.ClientLogicInput}
+    closed_called::Int
+    chan::Channel{WebSocketClient.ClientLogicInput}
+
+    function MockThrottlingWSClient()
+        channel_sent = Vector{WebSocketClient.ClientLogicInput}()
+        chan = Channel{WebSocketClient.ClientLogicInput}(32)
+        @schedule begin
+            for m in chan
+                push!(channel_sent, m)
+            end
+        end
+        new([], channel_sent, 0, chan)
+    end
+end
+
+function WebSocketClient.stop(c::MockThrottlingWSClient)
+    c.closed_called += 1
+    close(c.chan)
+end
+
+WebSocketClient.send_text(c::MockThrottlingWSClient, s::UTF8String) = push!(c.sent, s)
+WebSocketClient.get_channel(c::MockThrottlingWSClient) = c.chan
+
 facts("Throttling") do
     context("Throttle three messages") do
         throttle_time = 0.1
@@ -28,6 +54,43 @@ facts("Throttling") do
         @fact take!(throttled_chan) --> 2
         @fact take!(throttled_chan) --> 3
         @fact toc() >= 2*throttle_time --> true
+    end
+
+    context("ThrottledWSClient") do
+        throttle_time = 0.05
+        mock_ws = MockThrottlingWSClient()
+        throttled_ws = ThrottledWSClient(mock_ws, throttle_time)
+
+        n = 5
+        for i in 1:n
+            send_text(throttled_ws, utf8("Hello"))
+        end
+
+        # Sleep a short amount of time
+        sleep(0.1)
+        # All events should not have reached the mock WebSocket client.
+        @fact length(mock_ws.channel_sent) < n --> true
+
+        # After this sleep all events should have reached the WebSocket client
+        sleep(throttle_time * n)
+        @fact length(mock_ws.channel_sent) --> n
+    end
+
+    context("ThrottledWSClient does not throttle close") do
+        throttle_time = 0.05
+        mock_ws = MockThrottlingWSClient()
+        throttled_ws = ThrottledWSClient(mock_ws, throttle_time)
+
+        n = 5
+        for i in 1:n
+            stop(throttled_ws)
+        end
+
+        # Sleep a short amount of time, less than what it would have taken had all requests been
+        # throttled.
+        sleep(throttle_time)
+        # Check that all close requests have reached the mock WSClient.
+        @fact mock_ws.closed_called --> n
     end
 end
 
