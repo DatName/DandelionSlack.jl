@@ -15,6 +15,7 @@ include("RTM/register.jl")
 include("RTM/misc_events.jl")
 include("RTM/messages.jl")
 
+include("RTM/throttling.jl")
 include("RTM/rtm.jl")
 
 include("Util/util.jl")

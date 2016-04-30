@@ -94,7 +94,7 @@ immutable Im
     is_user_deleted::Nullable{Bool}
 end
 
-immutable Channel
+immutable SlackChannel
     id::ChannelId
     name::SlackName
     is_channel::Bool
