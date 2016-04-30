@@ -24,9 +24,9 @@ facts("Throttling") do
         put!(throttled_chan, 3)
 
         tic()
-        @fact take!(chan) --> 1
-        @fact take!(chan) --> 2
-        @fact take!(chan) --> 3
+        @fact take!(throttled_chan) --> 1
+        @fact take!(throttled_chan) --> 2
+        @fact take!(throttled_chan) --> 3
         @fact toc() >= 2*throttle_time --> true
     end
 end
