@@ -91,10 +91,12 @@ end
 close(c::RTMClient) = stop(c.client)
 
 function rtm_connect(uri::Requests.URI, handler::RTMHandler;
-        ws_client_factory=WebSocketClient.WSClient)
+        ws_client_factory=WebSocketClient.WSClient,
+        throttling_interval::Float64=1.0)
 
     rtm_ws = RTMWebSocket(handler)
     ws_client = ws_client_factory(uri, rtm_ws)
+    throttled_ws_client = ThrottledWSClient(ws_client, throttling_interval)
 
-    RTMClient(ws_client)
+    RTMClient(throttled_ws_client)
 end

@@ -63,18 +63,40 @@ end
 
 type MockWSClient <: AbstractWSClient
     sent::Vector{Dict{Any, Any}}
+    channel_sent::Vector{Dict{Any, Any}}
     closed_called::Int
+    chan::Channel{WebSocketClient.ClientLogicInput}
 
-    MockWSClient() = new([], 0)
+    function MockWSClient()
+        channel_sent = Vector{Dict{Any, Any}}()
+        chan = Channel{WebSocketClient.ClientLogicInput}(32)
+        @schedule begin
+            for m in chan
+                push!(channel_sent, JSON.parse(m.data))
+            end
+        end
+        new([], channel_sent, 0, chan)
+    end
 end
 
-WebSocketClient.stop(c::MockWSClient)                     = c.closed_called += 1
+function WebSocketClient.stop(c::MockWSClient)
+    close(c.chan)
+    c.closed_called += 1
+end
+WebSocketClient.get_channel(c::MockWSClient) = c.chan
 WebSocketClient.send_text(c::MockWSClient, s::UTF8String) = push!(c.sent, JSON.parse(s))
 
 function expect_sent_event(c::MockWSClient, expected::Dict{Any,Any})
-    @fact c.sent --> x -> !isempty(x)
+    @fact isempty(c.sent) --> false
 
     parsed = shift!(c.sent)
+    @fact parsed --> expected
+end
+
+function expect_channel_sent_event(c::MockWSClient, expected::Dict{Any,Any})
+    @fact isempty(c.channel_sent) --> false
+
+    parsed = shift!(c.channel_sent)
     @fact parsed --> expected
 end
 
@@ -251,12 +273,47 @@ facts("RTM integration") do
         # We don't expect any errors
         @fact mock_handler.errors --> isempty
 
+        # Sleep because the channel needs to process the sent messages.
+        sleep(0.02)
         # These are the events we expect.
         expect_event(mock_handler, HelloEvent())
         expect_event(mock_handler,
             MessageEvent("A message", ChannelId("C0"), UserId("U0"), EventTimestamp("12345.6789")))
-        expect_sent_event(mock_ws, Dict{Any,Any}(
+        expect_channel_sent_event(mock_ws, Dict{Any,Any}(
             "id" => 1, "type" => "message", "text" => "Hello", "channel" => "C0"))
         expect_reply(mock_handler, m_id1, MessageAckEvent("Hello", ChannelId("C0"), true))
+    end
+
+    context("Throttling of events") do
+        url = Requests.URI("wss://some/url/to/rtm")
+        mock_ws = MockWSClient()
+        mock_handler = MockRTMHandler()
+        rtm_ws = nothing
+        throttling_interval = 0.2
+        function ws_client_factory(uri, handler)
+            rtm_ws = handler
+            mock_ws
+        end
+
+        rtm_client = rtm_connect(url, mock_handler;
+            ws_client_factory=ws_client_factory,
+            throttling_interval=throttling_interval)
+
+        # Send messages and verify that they are throttled.
+        n = 5
+        for i = 1:n
+            send_event(rtm_client, OutgoingMessageEvent("Hello", ChannelId("C0")))
+        end
+
+        # Wait for one throttling interval and verify that we haven't sent all messages yet.
+        sleep(throttling_interval)
+        @fact length(mock_ws.channel_sent) < n --> true
+
+        # Sleep for the rest of the expected time and check that we have sent all messages.
+        sleep(throttling_interval * (n - 2) + 0.05)
+        @fact length(mock_ws.channel_sent) --> n
+
+        # We don't expect any errors
+        @fact mock_handler.errors --> isempty
     end
 end
