@@ -12,7 +12,7 @@ export
     end,
 
     begin
-        channels::Array{Channel}
+        channels::Array{SlackChannel}
     end)
 
 @slackmethod(ChannelsInfo, "channels.info",
@@ -21,7 +21,7 @@ export
     end,
 
     begin
-        channel::Channel
+        channel::SlackChannel
     end)
 
 @slackmethod(ChannelsArchive, "channels.archive",

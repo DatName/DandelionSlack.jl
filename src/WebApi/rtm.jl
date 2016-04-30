@@ -16,7 +16,7 @@ begin
     self::Self
     team::Team
     users::Array{User}
-    channels::Array{Channel}
+    channels::Array{SlackChannel}
     groups::Array{Group}
     mpims::Nullable{Array{Mpim}}
     ims::Array{Im}
