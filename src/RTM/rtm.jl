@@ -3,6 +3,7 @@ export RTMHandler,
        send_event
 
 using WebSocketClient
+import WebSocketClient: on_text, on_close, on_closing, on_create
 import JSON
 
 #
@@ -30,7 +31,7 @@ type RTMWebSocket <: WebSocketHandler
     handler::RTMHandler
 end
 
-function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
+function on_text(rtm::RTMWebSocket, text::UTF8String)
     dict::Dict{AbstractString, Any} = Dict()
     try
         dict = JSON.parse(text)
@@ -55,6 +56,11 @@ function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
     end
 
     event_type = find_event(dict["type"])
+    if event_type == nothing
+        on_error(rtm.handler, :unknown_message_type, text)
+        return
+    end
+
     event = deserialize(event_type, dict)
 
     if haskey(dict, "reply_to")
@@ -64,6 +70,11 @@ function WebSocketClient.on_text(rtm::RTMWebSocket, text::UTF8String)
         on_event(rtm.handler, event)
     end
 end
+
+# TODO: Implement these WebSocketHandler callbacks
+on_close(t::RTMWebSocket) = println("RTMWebSocket.on_close")
+on_create(t::RTMWebSocket, ::AbstractWSClient) = println("RTMWebSocket.on_create")
+on_closing(t::RTMWebSocket) = println("RTMWebSocket.on_closing")
 
 #
 # RTMClient is an object for sending events to Slack.

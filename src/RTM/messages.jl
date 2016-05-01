@@ -19,6 +19,7 @@ export OutgoingMessageEvent,
 @slackevent(MessageAckEvent, "message_ack",
     begin
         text::UTF8String
-        channel::UTF8String
+        channel::Nullable{UTF8String}
         ok::Bool
+        ts::EventTimestamp
     end)

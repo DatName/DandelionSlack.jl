@@ -1,7 +1,7 @@
 using WebSocketClient
 import JSON
 import Base.==
-import DandelionSlack: on_event, on_reply, on_error
+import DandelionSlack: on_event, on_reply, on_error, EventTimestamp
 
 #
 # A fake RTM event.
@@ -210,9 +210,10 @@ facts("RTM events") do
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
         on_text(rtm_ws,
-            utf8("""{"reply_to": 1, "ok": true, "text": "Hello", "channel": "C0"}"""))
+            utf8("""{"reply_to": 1, "ok": true, "text": "Hello", "channel": "C0", "ts": "123"}"""))
 
-        expect_reply(mock_handler, 1, MessageAckEvent(utf8("Hello"), ChannelId("C0"), true))
+        expect_reply(mock_handler, 1,
+            MessageAckEvent(utf8("Hello"), Nullable(ChannelId("C0")), true, EventTimestamp("123")))
     end
 
     context("Missing type key and not message ack") do
@@ -233,6 +234,15 @@ facts("RTM events") do
         expect_error(mock_handler, :invalid_json)
     end
 
+    context("Unknown message type") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+
+        on_text(rtm_ws, utf8("""{"type": "nosuchtype"}"""))
+
+        expect_error(mock_handler, :unknown_message_type)
+    end
+
     context("Error event from Slack") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
@@ -243,6 +253,17 @@ facts("RTM events") do
         expect_event(mock_handler, ErrorEvent(RTMError(1, "Reason")))
     end
 
+    # This only tests that the callback functions on_close, on_create, on_closing exist, not that
+    # they actually do anything.
+    context("Existence of all WebSocketHandler interface functions") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+        mock_ws_client = MockWSClient()
+
+        on_close(rtm_ws)
+        on_create(rtm_ws, mock_ws_client)
+        on_closing(rtm_ws)
+    end
 end
 
 facts("RTM integration") do
@@ -268,7 +289,7 @@ facts("RTM integration") do
         # Send a message, and then we fake a reply to it.
         m_id1 = send_event(rtm_client, OutgoingMessageEvent("Hello", ChannelId("C0")))
         on_text(rtm_ws,
-            utf8("""{"ok": true, "reply_to": $(m_id1), "text": "Hello", "channel": "C0"}"""))
+            utf8("""{"ok": true, "reply_to": $(m_id1), "text": "Hello", "channel": "C0", "ts": "12345.6789"}"""))
 
         # We don't expect any errors
         @fact mock_handler.errors --> isempty
@@ -281,7 +302,8 @@ facts("RTM integration") do
             MessageEvent("A message", ChannelId("C0"), UserId("U0"), EventTimestamp("12345.6789")))
         expect_channel_sent_event(mock_ws, Dict{Any,Any}(
             "id" => 1, "type" => "message", "text" => "Hello", "channel" => "C0"))
-        expect_reply(mock_handler, m_id1, MessageAckEvent("Hello", ChannelId("C0"), true))
+        expect_reply(mock_handler, m_id1,
+            MessageAckEvent("Hello", Nullable(ChannelId("C0")), true, EventTimestamp("12345.6789")))
     end
 
     context("Throttling of events") do
