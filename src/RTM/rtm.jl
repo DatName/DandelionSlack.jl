@@ -80,7 +80,9 @@ on_closing(t::RTMWebSocket) = println("RTMWebSocket.on_closing")
 # RTMClient is an object for sending events to Slack.
 #
 
-type RTMClient
+abstract AbstractRTMClient
+
+type RTMClient <: AbstractRTMClient
     client::AbstractWSClient
     next_id::Int64
 
