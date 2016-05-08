@@ -4,7 +4,9 @@ export
     ChannelsInfo,
     ChannelsInfoResponse,
     ChannelsArchive,
-    ChannelsArchiveResponse
+    ChannelsArchiveResponse,
+    ChannelsJoin,
+    ChannelsJoinResponse
 
 @slackmethod(ChannelsList, "channels.list",
     begin
@@ -12,7 +14,7 @@ export
     end,
 
     begin
-        channels::Array{SlackChannel}
+        channels::Array{SlackChannel,1}
     end)
 
 @slackmethod(ChannelsInfo, "channels.info",
@@ -34,4 +36,12 @@ export
     begin
     end)
 
+@slackmethod(ChannelsJoin, "channels.join",
+    begin
+        name::UTF8String
+    end,
 
+    begin
+        already_in_channel::Nullable{Bool}
+        # TODO: The "channel" object here might be a limited channel type.
+    end)

@@ -2,7 +2,8 @@ import Base.==
 
 export
     Self,
-    Token
+    Token,
+    SlackChannel
 
 immutable Self
     id::UserId
@@ -79,7 +80,7 @@ immutable Mpim
     is_group::Bool
     created::Timestamp
     creator::UserId
-    members::Array{UserId}
+    members::Vector{UserId}
     last_read::UTF8String
     latest::Message
     unread_count::UInt64
@@ -102,7 +103,7 @@ immutable SlackChannel
     creator::UTF8String
     is_archived::Bool
     is_general::Bool
-    members::Nullable{Array{UTF8String}}
+    members::Nullable{Vector{UTF8String}}
     topic::Nullable{Topic}
     purpose::Nullable{Purpose}
     is_member::Bool
@@ -119,7 +120,7 @@ immutable Group
     creator::UserId
     is_archived::Bool
     is_mpim::Bool
-    members::Array{UserId}
+    members::Vector{UserId}
     topic::Topic
     purpose::Purpose
 

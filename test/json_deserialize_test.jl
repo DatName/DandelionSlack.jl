@@ -37,8 +37,8 @@ end
 
 immutable JsonArray
     foo::Int
-    bar::Array{Bar}
-    fizz::Array{Int}
+    bar::Array{Bar,1}
+    fizz::Array{Int,1}
 end
 
 function ==(a::JsonArray, b::JsonArray)

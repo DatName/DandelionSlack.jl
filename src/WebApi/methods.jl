@@ -27,7 +27,9 @@ function ==(a::Status, b::Status)
     nulleq(a.error, b.error) && nulleq(a.warnings, b.warnings) && a.ok == b.ok
 end
 
-type RequestException <: Exception end
+type RequestException <: Exception
+    error::UTF8String
+end
 type HttpException <: Exception end
 
 function makerequest(m::Any, http::AbstractHttp)
@@ -39,11 +41,11 @@ function makerequest(m::Any, http::AbstractHttp)
         throw(HttpException())
     end
     body = text(resp)
-    status = deserialize(Status, body)
+    status = DandelionSlack.deserialize(Status, body)
     if !status.ok
-        throw(RequestException())
+        throw(RequestException(get(status.error)))
     end
     response_type = getresponsetype(typeof(m))
 
-    status, deserialize(response_type, body)
+    status, DandelionSlack.deserialize(response_type, body)
 end

@@ -15,12 +15,12 @@ begin
     url::UTF8String
     self::Self
     team::Team
-    users::Array{User}
-    channels::Array{SlackChannel}
-    groups::Array{Group}
-    mpims::Nullable{Array{Mpim}}
-    ims::Array{Im}
-    bots::Array{Bot}
+    users::Vector{User}
+    channels::Vector{SlackChannel}
+    groups::Vector{Group}
+    mpims::Nullable{Vector{Mpim}}
+    ims::Vector{Im}
+    bots::Vector{Bot}
 end)
 
 ==(a::RtmStartResponse, b::RtmStartResponse) = a.url == b.url

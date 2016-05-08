@@ -6,5 +6,5 @@ export UsersList, UsersListResponse
     end,
 
     begin
-        users::Vector{User}
+        members::Vector{User}
     end)
