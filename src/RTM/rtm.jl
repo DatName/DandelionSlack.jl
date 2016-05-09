@@ -20,8 +20,8 @@ on_event(h::RTMHandler, event::Event) =
 
 # on error is called when there is a problem with receiving the message, such as invalid JSON.
 # This is not an error sent by Slack, but an error caught in this code.
-on_error(h::RTMHandler, reason::Symbol, text::UTF8String) =
-    error("on_error not implemented for $(h)")
+on_error(h::RTMHandler, e::EventError) =
+    error("on_error not implemented for $(h) or $e")
 
 #
 # RTMWebSocketHandler takes events from a WebSocket connection and converts to RTM events.
@@ -37,7 +37,7 @@ function on_text(rtm::RTMWebSocket, text::UTF8String)
         dict = JSON.parse(text)
     catch ex
         if isa(ex, ErrorException)
-            on_error(rtm.handler, :invalid_json, text)
+            on_error(rtm.handler, InvalidJSONError(text))
             return
         end
         rethrow(ex)
@@ -50,18 +50,28 @@ function on_text(rtm::RTMWebSocket, text::UTF8String)
         if haskey(dict, "text") && haskey(dict, "reply_to")
             dict["type"] = utf8("message_ack")
         else
-            on_error(rtm.handler, :missing_type, text)
+            on_error(rtm.handler, MissingTypeError(text))
             return
         end
     end
 
     event_type = find_event(dict["type"])
     if event_type == nothing
-        on_error(rtm.handler, :unknown_message_type, text)
+        on_error(rtm.handler, UnknownEventTypeError(text, dict["type"]))
         return
     end
 
-    event = deserialize(event_type, dict)
+    event = nothing
+    try
+        event = deserialize(event_type, dict)
+    catch ex
+        if isa(ex, KeyError)
+            on_error(rtm.handler, DeserializationError(ex.key, text, event_type))
+            return
+        else
+            rethrow(ex)
+        end
+    end
 
     if haskey(dict, "reply_to")
         message_id = dict["reply_to"]

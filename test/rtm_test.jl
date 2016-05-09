@@ -52,6 +52,7 @@ end
 
 @eventeq DandelionSlack.OutgoingEvent
 @eventeq DandelionSlack.Event
+@eventeq DandelionSlack.EventError
 
 function ==(a::RTMError, b::RTMError)
     return a.code == b.code && a.msg == b.msg
@@ -109,7 +110,7 @@ expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> n
 type MockRTMHandler <: RTMHandler
     reply_events::Vector{Tuple{Int64, DandelionSlack.Event}}
     events::Vector{DandelionSlack.Event}
-    errors::Vector{Symbol}
+    errors::Vector{EventError}
 
     MockRTMHandler() = new([], [], [])
 end
@@ -118,7 +119,7 @@ on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.Event) =
     push!(h.reply_events, (id, event))
 
 on_event(h::MockRTMHandler, event::DandelionSlack.Event) = push!(h.events, event)
-on_error(h::MockRTMHandler, reason::Symbol, text::UTF8String) = push!(h.errors, reason)
+on_error(h::MockRTMHandler, e::EventError) = push!(h.errors, e)
 
 function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.Event)
     @fact isempty(h.reply_events) --> false
@@ -133,9 +134,9 @@ function expect_event(h::MockRTMHandler, event::DandelionSlack.Event)
     @fact shift!(h.events) --> event
 end
 
-function expect_error(h::MockRTMHandler, reason::Symbol)
+function expect_error(h::MockRTMHandler, e::EventError)
     @fact isempty(h.errors) --> false
-    @fact shift!(h.errors) --> reason
+    @fact shift!(h.errors) --> e
 end
 
 #
@@ -220,27 +221,41 @@ facts("RTM events") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"reply_to": 1}"""))
+        text = utf8("""{"reply_to": 1}""")
+        on_text(rtm_ws, text)
 
-        expect_error(mock_handler, :missing_type)
+        expect_error(mock_handler, MissingTypeError(text))
     end
 
     context("Invalid JSON") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"reply_to" foobarbaz"""))
+        text = utf8("""{"reply_to" foobarbaz""")
+        on_text(rtm_ws, text)
 
-        expect_error(mock_handler, :invalid_json)
+        expect_error(mock_handler, InvalidJSONError(text))
     end
 
     context("Unknown message type") do
         mock_handler = MockRTMHandler()
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
-        on_text(rtm_ws, utf8("""{"type": "nosuchtype"}"""))
+        text = utf8("""{"type": "nosuchtype"}""")
+        on_text(rtm_ws, text)
 
-        expect_error(mock_handler, :unknown_message_type)
+        expect_error(mock_handler, UnknownEventTypeError(text, utf8("nosuchtype")))
+    end
+
+    context("Missing required field") do
+        mock_handler = MockRTMHandler()
+        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+
+        # No "text" field.
+        text = utf8("""{"type": "message", "channel": "C0", "user": "U0", "ts": "123"}""")
+        on_text(rtm_ws, text)
+
+        expect_error(mock_handler, DeserializationError(utf8("text"), text, MessageEvent))
     end
 
     context("Error event from Slack") do

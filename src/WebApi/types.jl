@@ -36,13 +36,13 @@ immutable User
     id::UserId
     name::SlackName
     deleted::Bool
-    color::UTF8String
+    color::Nullable{UTF8String}
     profile::Profile
-    is_admin::Bool
-    is_owner::Bool
-    is_primary_owner::Bool
-    is_restricted::Bool
-    is_ultra_restricted::Bool
+    is_admin::Nullable{Bool}
+    is_owner::Nullable{Bool}
+    is_primary_owner::Nullable{Bool}
+    is_restricted::Nullable{Bool}
+    is_ultra_restricted::Nullable{Bool}
     has_2fa::Nullable{Bool}
     two_factor_type::Nullable{UTF8String}
     has_files::Nullable{Bool}
