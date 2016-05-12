@@ -3,7 +3,8 @@ export RTMHandler,
        send_event
 
 using WebSocketClient
-import WebSocketClient: on_text, on_close, on_closing, on_create
+import WebSocketClient: on_text, on_binary, on_create,
+                        state_connecting, state_open, state_closing, state_closed
 import JSON
 
 #
@@ -82,9 +83,12 @@ function on_text(rtm::RTMWebSocket, text::UTF8String)
 end
 
 # TODO: Implement these WebSocketHandler callbacks
-on_close(t::RTMWebSocket) = println("RTMWebSocket.on_close")
-on_create(t::RTMWebSocket, ::AbstractWSClient) = println("RTMWebSocket.on_create")
-on_closing(t::RTMWebSocket) = println("RTMWebSocket.on_closing")
+on_binary(::RTMWebSocket, ::Vector{UInt8}) = nothing
+on_create(t::RTMWebSocket, ::AbstractWSClient) = nothing
+state_connecting(::RTMWebSocket) = nothing
+state_open(::RTMWebSocket) = nothing
+state_closed(t::RTMWebSocket) = nothing
+state_closing(t::RTMWebSocket) = nothing
 
 #
 # RTMClient is an object for sending events to Slack.

@@ -275,9 +275,13 @@ facts("RTM events") do
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
         mock_ws_client = MockWSClient()
 
-        on_close(rtm_ws)
         on_create(rtm_ws, mock_ws_client)
-        on_closing(rtm_ws)
+        on_binary(rtm_ws, b"")
+
+        state_connecting(rtm_ws)
+        state_open(rtm_ws)
+        state_closed(rtm_ws)
+        state_closing(rtm_ws)
     end
 end
 
