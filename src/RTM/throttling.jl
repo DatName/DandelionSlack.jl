@@ -1,5 +1,6 @@
 import Base: put!, take!
-import WebSocketClient: AbstractWSClient, ClientLogicInput, send_text, get_channel, stop
+import WebSocketClient: AbstractWSClient, ClientLogicInput, send_text, get_channel, stop, ProxyCall,
+                        handle
 
 export ThrottledChannel,
        ThrottledWSClient
@@ -37,10 +38,10 @@ take!{T}(throttled::ThrottledChannel{T}) = take!(throttled.chan)
 # Also, we create SendTextFrames ourselves here, which also breaks the abstraction.
 immutable ThrottledWSClient <: AbstractWSClient
     ws::AbstractWSClient
-    chan::ThrottledChannel{ClientLogicInput}
+    chan::ThrottledChannel{ProxyCall}
 
     function ThrottledWSClient(ws::AbstractWSClient, interval::Float64; capacity::Int=32)
-        chan = ThrottledChannel{ClientLogicInput}(get_channel(ws), interval; capacity=capacity)
+        chan = ThrottledChannel{ProxyCall}(get_channel(ws), interval; capacity=capacity)
         new(ws, chan)
     end
 end
@@ -51,4 +52,4 @@ get_channel(ws::ThrottledWSClient) = ws.chan
 stop(ws::ThrottledWSClient) = stop(ws.ws)
 
 send_text(ws::ThrottledWSClient, text::UTF8String) =
-    put!(ws.chan, WebSocketClient.SendTextFrame(text, true, OPCODE_TEXT))
+    put!(ws.chan, (handle, Any[WebSocketClient.SendTextFrame(text, true, OPCODE_TEXT)]))

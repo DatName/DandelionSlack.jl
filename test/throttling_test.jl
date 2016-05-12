@@ -1,12 +1,14 @@
+import WebSocketClient: ProxyCall
+
 type MockThrottlingWSClient <: AbstractWSClient
     sent::Vector{UTF8String}
-    channel_sent::Vector{WebSocketClient.ClientLogicInput}
+    channel_sent::Vector{ProxyCall}
     closed_called::Int
-    chan::Channel{WebSocketClient.ClientLogicInput}
+    chan::Channel{ProxyCall}
 
     function MockThrottlingWSClient()
-        channel_sent = Vector{WebSocketClient.ClientLogicInput}()
-        chan = Channel{WebSocketClient.ClientLogicInput}(32)
+        channel_sent = Vector{ProxyCall}()
+        chan = Channel{ProxyCall}(32)
         @schedule begin
             for m in chan
                 push!(channel_sent, m)

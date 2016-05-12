@@ -2,6 +2,7 @@ using WebSocketClient
 import JSON
 import Base.==
 import DandelionSlack: on_event, on_reply, on_error, EventTimestamp
+import WebSocketClient: ProxyCall
 
 #
 # A fake RTM event.
@@ -66,13 +67,14 @@ type MockWSClient <: AbstractWSClient
     sent::Vector{Dict{Any, Any}}
     channel_sent::Vector{Dict{Any, Any}}
     closed_called::Int
-    chan::Channel{WebSocketClient.ClientLogicInput}
+    chan::Channel{ProxyCall}
 
     function MockWSClient()
         channel_sent = Vector{Dict{Any, Any}}()
-        chan = Channel{WebSocketClient.ClientLogicInput}(32)
+        chan = Channel{ProxyCall}(32)
         @schedule begin
-            for m in chan
+            for (sym, ms) in chan
+                m = ms[1]
                 push!(channel_sent, JSON.parse(m.data))
             end
         end
