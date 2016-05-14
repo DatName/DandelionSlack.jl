@@ -13,7 +13,7 @@ import JSON
 
 abstract RTMHandler
 
-on_reply(h::RTMHandler, id::Int64, event::Event) =
+on_reply(h::RTMHandler, id::Int, event::Event) =
     error("on_reply not implemented for $(h) and/or $(event)")
 
 on_event(h::RTMHandler, event::Event) =
