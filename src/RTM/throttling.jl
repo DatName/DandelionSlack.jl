@@ -1,5 +1,5 @@
 import Base: put!, take!
-import WebSocketClient: AbstractWSClient, ClientLogicInput, send_text, get_channel, stop, ProxyCall,
+import DandelionWebSockets: AbstractWSClient, ClientLogicInput, send_text, get_channel, stop, ProxyCall,
                         handle
 
 export ThrottledChannel,
@@ -52,4 +52,4 @@ get_channel(ws::ThrottledWSClient) = ws.chan
 stop(ws::ThrottledWSClient) = stop(ws.ws)
 
 send_text(ws::ThrottledWSClient, text::UTF8String) =
-    put!(ws.chan, (handle, Any[WebSocketClient.SendTextFrame(text, true, OPCODE_TEXT)]))
+    put!(ws.chan, (handle, Any[DandelionWebSockets.SendTextFrame(text, true, OPCODE_TEXT)]))

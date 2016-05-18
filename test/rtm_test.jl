@@ -1,8 +1,8 @@
-using WebSocketClient
+using DandelionWebSockets
 import JSON
 import Base.==
 import DandelionSlack: on_event, on_reply, on_error, EventTimestamp
-import WebSocketClient: ProxyCall
+import DandelionWebSockets: ProxyCall
 
 #
 # A fake RTM event.
@@ -82,12 +82,12 @@ type MockWSClient <: AbstractWSClient
     end
 end
 
-function WebSocketClient.stop(c::MockWSClient)
+function DandelionWebSockets.stop(c::MockWSClient)
     close(c.chan)
     c.closed_called += 1
 end
-WebSocketClient.get_channel(c::MockWSClient) = c.chan
-WebSocketClient.send_text(c::MockWSClient, s::UTF8String) = push!(c.sent, JSON.parse(s))
+DandelionWebSockets.get_channel(c::MockWSClient) = c.chan
+DandelionWebSockets.send_text(c::MockWSClient, s::UTF8String) = push!(c.sent, JSON.parse(s))
 
 function expect_sent_event(c::MockWSClient, expected::Dict{Any,Any})
     @fact isempty(c.sent) --> false

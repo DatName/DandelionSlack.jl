@@ -1,4 +1,4 @@
-import WebSocketClient: ProxyCall
+import DandelionWebSockets: ProxyCall
 
 type MockThrottlingWSClient <: AbstractWSClient
     sent::Vector{UTF8String}
@@ -18,13 +18,13 @@ type MockThrottlingWSClient <: AbstractWSClient
     end
 end
 
-function WebSocketClient.stop(c::MockThrottlingWSClient)
+function DandelionWebSockets.stop(c::MockThrottlingWSClient)
     c.closed_called += 1
     close(c.chan)
 end
 
-WebSocketClient.send_text(c::MockThrottlingWSClient, s::UTF8String) = push!(c.sent, s)
-WebSocketClient.get_channel(c::MockThrottlingWSClient) = c.chan
+DandelionWebSockets.send_text(c::MockThrottlingWSClient, s::UTF8String) = push!(c.sent, s)
+DandelionWebSockets.get_channel(c::MockThrottlingWSClient) = c.chan
 
 facts("Throttling") do
     context("Throttle three messages") do

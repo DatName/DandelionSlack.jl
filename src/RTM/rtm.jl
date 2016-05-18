@@ -2,8 +2,8 @@ export RTMHandler,
        rtm_connect,
        send_event
 
-using WebSocketClient
-import WebSocketClient: on_text, on_binary, on_create,
+using DandelionWebSockets
+import DandelionWebSockets: on_text, on_binary, on_create,
                         state_connecting, state_open, state_closing, state_closed
 import JSON
 
@@ -118,7 +118,7 @@ end
 close(c::RTMClient) = stop(c.client)
 
 function rtm_connect(uri::Requests.URI, handler::RTMHandler;
-        ws_client_factory=WebSocketClient.WSClient,
+        ws_client_factory=DandelionWebSockets.WSClient,
         throttling_interval::Float64=1.0)
 
     rtm_ws = RTMWebSocket(handler)
