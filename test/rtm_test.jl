@@ -1,4 +1,5 @@
 using DandelionWebSockets
+
 import JSON
 import Base.==
 import DandelionSlack: on_event, on_reply, on_error, EventTimestamp
@@ -65,41 +66,25 @@ end
 
 type MockWSClient <: AbstractWSClient
     sent::Vector{Dict{Any, Any}}
-    channel_sent::Vector{Dict{Any, Any}}
     closed_called::Int
-    chan::Channel{ProxyCall}
 
     function MockWSClient()
-        channel_sent = Vector{Dict{Any, Any}}()
-        chan = Channel{ProxyCall}(32)
-        @schedule begin
-            for (sym, ms) in chan
-                m = ms[1]
-                push!(channel_sent, JSON.parse(m.data))
-            end
-        end
-        new([], channel_sent, 0, chan)
+        new([], 0)
     end
 end
 
 function DandelionWebSockets.stop(c::MockWSClient)
-    close(c.chan)
     c.closed_called += 1
 end
-DandelionWebSockets.get_channel(c::MockWSClient) = c.chan
 DandelionWebSockets.send_text(c::MockWSClient, s::UTF8String) = push!(c.sent, JSON.parse(s))
 
 function expect_sent_event(c::MockWSClient, expected::Dict{Any,Any})
     @fact isempty(c.sent) --> false
+    if isempty(c.sent)
+        error("No sent event corresponding to expected $expected")
+    end
 
     parsed = shift!(c.sent)
-    @fact parsed --> expected
-end
-
-function expect_channel_sent_event(c::MockWSClient, expected::Dict{Any,Any})
-    @fact isempty(c.channel_sent) --> false
-
-    parsed = shift!(c.channel_sent)
     @fact parsed --> expected
 end
 
@@ -277,7 +262,6 @@ facts("RTM events") do
         rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
         mock_ws_client = MockWSClient()
 
-        on_create(rtm_ws, mock_ws_client)
         on_binary(rtm_ws, b"")
 
         state_connecting(rtm_ws)
@@ -321,7 +305,7 @@ facts("RTM integration") do
         expect_event(mock_handler, HelloEvent())
         expect_event(mock_handler,
             MessageEvent("A message", ChannelId("C0"), UserId("U0"), EventTimestamp("12345.6789")))
-        expect_channel_sent_event(mock_ws, Dict{Any,Any}(
+        expect_sent_event(mock_ws, Dict{Any,Any}(
             "id" => 1, "type" => "message", "text" => "Hello", "channel" => "C0"))
         expect_reply(mock_handler, m_id1,
             MessageAckEvent("Hello", Nullable(ChannelId("C0")), true, EventTimestamp("12345.6789")))
@@ -350,11 +334,11 @@ facts("RTM integration") do
 
         # Wait for one throttling interval and verify that we haven't sent all messages yet.
         sleep(throttling_interval)
-        @fact length(mock_ws.channel_sent) < n --> true
+        @fact length(mock_ws.sent) < n --> true
 
         # Sleep for the rest of the expected time and check that we have sent all messages.
         sleep(throttling_interval * (n - 2) + 0.05)
-        @fact length(mock_ws.channel_sent) --> n
+        @fact length(mock_ws.sent) --> n
 
         # We don't expect any errors
         @fact mock_handler.errors --> isempty

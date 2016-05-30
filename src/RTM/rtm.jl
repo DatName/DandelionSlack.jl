@@ -3,8 +3,8 @@ export RTMHandler,
        send_event
 
 using DandelionWebSockets
-import DandelionWebSockets: on_text, on_binary, on_create,
-                        state_connecting, state_open, state_closing, state_closed
+import DandelionWebSockets: on_text, on_binary,
+                            state_connecting, state_open, state_closing, state_closed
 import JSON
 
 #
@@ -84,7 +84,6 @@ end
 
 # TODO: Implement these WebSocketHandler callbacks
 on_binary(::RTMWebSocket, ::Vector{UInt8}) = nothing
-on_create(t::RTMWebSocket, ::AbstractWSClient) = nothing
 state_connecting(::RTMWebSocket) = nothing
 state_open(::RTMWebSocket) = nothing
 state_closed(t::RTMWebSocket) = nothing
