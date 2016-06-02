@@ -2,8 +2,9 @@ using DandelionWebSockets
 
 import JSON
 import Base.==
-import DandelionSlack: on_event, on_reply, on_error, EventTimestamp
-import DandelionWebSockets: ProxyCall
+import DandelionSlack: on_event, on_reply, on_error, EventTimestamp, RTMWebSocket
+import DandelionWebSockets: @mock, @mockfunction, @expect, Throws
+import DandelionWebSockets: AbstractRetry, Retry, retry, reset
 
 #
 # A fake RTM event.
@@ -94,37 +95,29 @@ expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> n
 # A mock RTMHandler to test that RTMWebSocket propagates messages correctly.
 #
 
-type MockRTMHandler <: RTMHandler
-    reply_events::Vector{Tuple{Int64, DandelionSlack.Event}}
-    events::Vector{DandelionSlack.Event}
-    errors::Vector{EventError}
+@mock MockRTMHandler RTMHandler
+mock_handler = MockRTMHandler()
+@mockfunction(mock_handler,
+    on_reply(::MockRTMHandler, ::Int64, ::DandelionSlack.Event),
+    on_event(::MockRTMHandler, ::DandelionSlack.Event),
+    on_error(::MockRTMHandler, e::EventError),
+    on_disconnect(::MockRTMHandler))
 
-    MockRTMHandler() = new([], [], [])
-end
+#
+# Fake requests and mocking the makerequests function.
+#
 
-on_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.Event) =
-    push!(h.reply_events, (id, event))
+immutable FakeRequests <: AbstractHttp end
+fake_requests = FakeRequests()
 
-on_event(h::MockRTMHandler, event::DandelionSlack.Event) = push!(h.events, event)
-on_error(h::MockRTMHandler, e::EventError) = push!(h.errors, e)
+abstract AbstractMocker
+@mock Mocker AbstractMocker
+mocker = Mocker()
+@mockfunction mocker makerequest(::Any, ::FakeRequests)
 
-function expect_reply(h::MockRTMHandler, id::Int64, event::DandelionSlack.Event)
-    @fact isempty(h.reply_events) --> false
-
-    actual_id, actual_event = shift!(h.reply_events)
-    @fact actual_id --> id
-    @fact actual_event --> event
-end
-
-function expect_event(h::MockRTMHandler, event::DandelionSlack.Event)
-    @fact isempty(h.events) --> false
-    @fact shift!(h.events) --> event
-end
-
-function expect_error(h::MockRTMHandler, e::EventError)
-    @fact isempty(h.errors) --> false
-    @fact shift!(h.errors) --> e
-end
+@mock MockRetry AbstractRetry
+mock_retry = MockRetry()
+@mockfunction mock_retry retry(::MockRetry) reset(::MockRetry)
 
 #
 # Tests
@@ -183,84 +176,114 @@ facts("RTM events") do
     end
 
     context("Propagate events from WebSocket to RTM") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+
+        @expect mock_handler on_event(mock_handler,
+            MessageEvent(utf8("Hello"), ChannelId(utf8("C0")), UserId("U0"), EventTimestamp("123")))
 
         on_text(rtm_ws, utf8("""{"type": "message", "channel": "C0",
             "text": "Hello", "user": "U0", "ts": "123"}"""))
 
-        expect_event(mock_handler,
-            MessageEvent(utf8("Hello"), ChannelId(utf8("C0")), UserId("U0"), EventTimestamp("123")))
+        check(mock_handler)
     end
 
     context("Message ack event") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+
+        @expect mock_handler on_reply(mock_handler, 1,
+            MessageAckEvent(utf8("Hello"), Nullable(ChannelId("C0")), true, EventTimestamp("123")))
 
         on_text(rtm_ws,
             utf8("""{"reply_to": 1, "ok": true, "text": "Hello", "channel": "C0", "ts": "123"}"""))
 
-        expect_reply(mock_handler, 1,
-            MessageAckEvent(utf8("Hello"), Nullable(ChannelId("C0")), true, EventTimestamp("123")))
+        check(mock_handler)
     end
 
     context("Missing type key and not message ack") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
 
         text = utf8("""{"reply_to": 1}""")
+        @expect mock_handler on_error(mock_handler, MissingTypeError(text))
+
         on_text(rtm_ws, text)
 
-        expect_error(mock_handler, MissingTypeError(text))
+        check(mock_handler)
     end
 
-    context("Invalid JSON") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
 
+    context("Invalid JSON") do
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
         text = utf8("""{"reply_to" foobarbaz""")
+
+        @expect mock_handler on_error(mock_handler, InvalidJSONError(text))
+
         on_text(rtm_ws, text)
 
-        expect_error(mock_handler, InvalidJSONError(text))
+        check(mock_handler)
     end
 
     context("Unknown message type") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
-
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
         text = utf8("""{"type": "nosuchtype"}""")
+
+        @expect mock_handler on_error(mock_handler, UnknownEventTypeError(text, utf8("nosuchtype")))
+
         on_text(rtm_ws, text)
 
-        expect_error(mock_handler, UnknownEventTypeError(text, utf8("nosuchtype")))
+        check(mock_handler)
     end
 
     context("Missing required field") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
-
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
         # No "text" field.
         text = utf8("""{"type": "message", "channel": "C0", "user": "U0", "ts": "123"}""")
+
+        @expect mock_handler on_error(mock_handler, DeserializationError(utf8("text"), text, MessageEvent))
+
         on_text(rtm_ws, text)
 
-        expect_error(mock_handler, DeserializationError(utf8("text"), text, MessageEvent))
+        check(mock_handler)
     end
 
     context("Error event from Slack") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+
+        @expect mock_handler on_event(mock_handler, ErrorEvent(RTMError(1, "Reason")))
 
         on_text(rtm_ws,
             utf8("""{"type": "error", "error": {"code": 1, "msg": "Reason"}}"""))
 
-        expect_event(mock_handler, ErrorEvent(RTMError(1, "Reason")))
+        check(mock_handler)
+    end
+
+    context("Retry connection on WebSocket close") do
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+
+        @expect mock_handler on_disconnect(mock_handler)
+        @expect mock_retry retry(mock_retry)
+
+        state_closed(rtm_ws)
+
+        check(mock_handler)
+        check(mock_retry)
+    end
+
+    context("Successful connection") do
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+
+        @expect mock_handler on_connect(mock_handler)
+        @expect mock_retry reset(mock_retry)
+
+        state_open(rtm_ws)
+
+        check(mock_handler)
+        check(mock_retry)
     end
 
     # This only tests that the callback functions on_close, on_create, on_closing exist, not that
     # they actually do anything.
     context("Existence of all WebSocketHandler interface functions") do
-        mock_handler = MockRTMHandler()
-        rtm_ws = DandelionSlack.RTMWebSocket(mock_handler)
-        mock_ws_client = MockWSClient()
+        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
 
         on_binary(rtm_ws, b"")
 
@@ -274,7 +297,6 @@ end
 facts("RTM integration") do
     context("Send and receive events") do
         url = Requests.URI("wss://some/url/to/rtm")
-        actual_url = nothing
         mock_ws = MockWSClient()
         mock_handler = MockRTMHandler()
         rtm_ws = nothing
@@ -284,7 +306,10 @@ facts("RTM integration") do
             mock_ws
         end
 
-        rtm_client = rtm_connect(url, mock_handler; ws_client_factory=ws_client_factory)
+        rtm_client = rtm_connect(mock_handler; requests=fake_requests)
+
+        # TODO: expect makerequest(TypeMatcher(RtmStart), fake_requests)
+        #       Returns an OK reply.
 
         # These are fake events from the WebSocket
         on_text(rtm_ws, utf8("""{"type": "hello"}"""))

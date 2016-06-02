@@ -4,7 +4,8 @@ export RTMHandler,
 
 using DandelionWebSockets
 import DandelionWebSockets: on_text, on_binary,
-                            state_connecting, state_open, state_closing, state_closed
+                            state_connecting, state_open, state_closing, state_closed,
+                            AbstractWSClient
 import JSON
 
 #
@@ -30,6 +31,7 @@ on_error(h::RTMHandler, e::EventError) =
 
 type RTMWebSocket <: WebSocketHandler
     handler::RTMHandler
+    connection_retry::AbstractRetry
 end
 
 function on_text(rtm::RTMWebSocket, text::UTF8String)
@@ -85,7 +87,9 @@ end
 # TODO: Implement these WebSocketHandler callbacks
 on_binary(::RTMWebSocket, ::Vector{UInt8}) = nothing
 state_connecting(::RTMWebSocket) = nothing
+# TODO: Reset connection retry.
 state_open(::RTMWebSocket) = nothing
+# TODO: Ensure that the connection is retried.
 state_closed(t::RTMWebSocket) = nothing
 state_closing(t::RTMWebSocket) = nothing
 
@@ -98,6 +102,8 @@ abstract AbstractRTMClient
 type RTMClient <: AbstractRTMClient
     client::AbstractWSClient
     next_id::Int64
+
+    # TODO: Keep an RTMWebSocket here?
 
     RTMClient(client::AbstractWSClient) = new(client, 1)
 end
@@ -116,13 +122,6 @@ end
 
 close(c::RTMClient) = stop(c.client)
 
-function rtm_connect(uri::Requests.URI, handler::RTMHandler;
-        ws_client_factory=DandelionWebSockets.WSClient,
-        throttling_interval::Float64=1.0)
+function rtm_connect(client::RTMClient)
 
-    rtm_ws = RTMWebSocket(handler)
-    ws_client = ws_client_factory(uri, rtm_ws)
-    throttled_ws_client = ThrottledWSClient(ws_client, throttling_interval)
-
-    RTMClient(throttled_ws_client)
 end
