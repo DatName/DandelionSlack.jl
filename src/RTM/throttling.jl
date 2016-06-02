@@ -1,5 +1,5 @@
 import Base: put!, take!, close
-import DandelionWebSockets: AbstractWSClient, ClientLogicInput, send_text, get_channel, stop, ProxyCall,
+import DandelionWebSockets: AbstractWSClient, ClientLogicInput, send_text, stop,
                         handle
 
 export ThrottledWSClient
