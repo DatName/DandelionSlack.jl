@@ -25,6 +25,9 @@ on_event(h::RTMHandler, event::Event) =
 on_error(h::RTMHandler, e::EventError) =
     error("on_error not implemented for $(h) or $e")
 
+on_disconnect(h::RTMHandler) = error("on_disconnect not implemented for $(h)")
+on_connect(h::RTMHandler) = error("on_connect not implemented for $(h)")
+
 #
 # RTMWebSocketHandler takes events from a WebSocket connection and converts to RTM events.
 #
@@ -84,13 +87,19 @@ function on_text(rtm::RTMWebSocket, text::UTF8String)
     end
 end
 
-# TODO: Implement these WebSocketHandler callbacks
+function state_open(rtm::RTMWebSocket)
+    on_connect(rtm.handler)
+    reset(rtm.connection_retry)
+end
+
+function state_closed(rtm::RTMWebSocket)
+    on_disconnect(rtm.handler)
+    retry(rtm.connection_retry)
+end
+
+# Implement a warning here, as Slack shouldn't send binary messages.
 on_binary(::RTMWebSocket, ::Vector{UInt8}) = nothing
 state_connecting(::RTMWebSocket) = nothing
-# TODO: Reset connection retry.
-state_open(::RTMWebSocket) = nothing
-# TODO: Ensure that the connection is retried.
-state_closed(t::RTMWebSocket) = nothing
 state_closing(t::RTMWebSocket) = nothing
 
 #

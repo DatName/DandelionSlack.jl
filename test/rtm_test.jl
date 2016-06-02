@@ -2,7 +2,8 @@ using DandelionWebSockets
 
 import JSON
 import Base.==
-import DandelionSlack: on_event, on_reply, on_error, EventTimestamp, RTMWebSocket
+import DandelionSlack: on_event, on_reply, on_error, on_connect, on_disconnect,
+                       EventTimestamp, RTMWebSocket
 import DandelionWebSockets: @mock, @mockfunction, @expect, Throws
 import DandelionWebSockets: AbstractRetry, Retry, retry, reset
 
@@ -101,7 +102,8 @@ mock_handler = MockRTMHandler()
     on_reply(::MockRTMHandler, ::Int64, ::DandelionSlack.Event),
     on_event(::MockRTMHandler, ::DandelionSlack.Event),
     on_error(::MockRTMHandler, e::EventError),
-    on_disconnect(::MockRTMHandler))
+    on_disconnect(::MockRTMHandler),
+    on_connect(::MockRTMHandler))
 
 #
 # Fake requests and mocking the makerequests function.
@@ -280,16 +282,13 @@ facts("RTM events") do
         check(mock_retry)
     end
 
-    # This only tests that the callback functions on_close, on_create, on_closing exist, not that
-    # they actually do anything.
-    context("Existence of all WebSocketHandler interface functions") do
+    # This only tests that the callback functions exist, not that they actually do anything.
+    # This is mostly for coverage.
+    context("Existence of the rest of WebSocketHandler interface functions") do
         rtm_ws = RTMWebSocket(mock_handler, mock_retry)
 
         on_binary(rtm_ws, b"")
-
         state_connecting(rtm_ws)
-        state_open(rtm_ws)
-        state_closed(rtm_ws)
         state_closing(rtm_ws)
     end
 end
