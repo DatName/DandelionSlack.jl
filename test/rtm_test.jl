@@ -3,8 +3,8 @@ using DandelionWebSockets
 import JSON
 import Base.==
 import DandelionSlack: on_event, on_reply, on_error, on_connect, on_disconnect,
-                       EventTimestamp, RTMWebSocket
-import DandelionWebSockets: @mock, @mockfunction, @expect, Throws
+                       EventTimestamp, RTMWebSocket, send_text, stop
+import DandelionWebSockets: @mock, @mockfunction, @expect, Throws, mock_match
 import DandelionWebSockets: AbstractRetry, Retry, retry, reset
 
 #
@@ -66,31 +66,11 @@ end
 # Implement a mock WebSocket client that stores the events we send.
 #
 
-type MockWSClient <: AbstractWSClient
-    sent::Vector{Dict{Any, Any}}
-    closed_called::Int
-
-    function MockWSClient()
-        new([], 0)
-    end
-end
-
-function DandelionWebSockets.stop(c::MockWSClient)
-    c.closed_called += 1
-end
-DandelionWebSockets.send_text(c::MockWSClient, s::UTF8String) = push!(c.sent, JSON.parse(s))
-
-function expect_sent_event(c::MockWSClient, expected::Dict{Any,Any})
-    @fact isempty(c.sent) --> false
-    if isempty(c.sent)
-        error("No sent event corresponding to expected $expected")
-    end
-
-    parsed = shift!(c.sent)
-    @fact parsed --> expected
-end
-
-expect_close(c::MockWSClient; no_of_closes::Int=1) = @fact c.closed_called --> no_of_closes
+@mock MockWSClient AbstractWSClient
+ws_client = MockWSClient()
+@mockfunction(ws_client,
+    send_text(::MockWSClient, ::UTF8String),
+    stop(::MockWSClient))
 
 #
 # A mock RTMHandler to test that RTMWebSocket propagates messages correctly.
@@ -122,6 +102,16 @@ mock_retry = MockRetry()
 @mockfunction mock_retry retry(::MockRetry) reset(::MockRetry)
 
 #
+# Matching JSON
+#
+
+immutable JSONMatcher <: AbstractMatcher
+    object::Dict{Any, Any}
+end
+
+mock_match(m::JSONMatcher, v::AbstractString) = m.object == JSON.parse(v)
+
+#
 # Tests
 #
 
@@ -149,8 +139,11 @@ facts("RTM events") do
     end
 
     context("Increasing message id") do
-        ws_client = MockWSClient()
         rtm = DandelionSlack.RTMClient(ws_client)
+
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
 
         message_id_1 = DandelionSlack.send_event(rtm, FakeEvent())
         message_id_2 = DandelionSlack.send_event(rtm, FakeEvent())
@@ -160,21 +153,22 @@ facts("RTM events") do
     end
 
     context("Sending events") do
-        ws_client = MockWSClient()
         rtm = DandelionSlack.RTMClient(ws_client)
 
-        id_1 = DandelionSlack.send_event(rtm, test_event_1)
-        id_2 = DandelionSlack.send_event(rtm, test_event_2)
+        @expect ws_client send_text(ws_client, JSONMatcher(
+            Dict{Any,Any}("id" => 1, "value" => test_event_1.value)))
+        @expect ws_client send_text(ws_client, JSONMatcher(
+            Dict{Any,Any}("id" => 2, "value" => test_event_2.value)))
 
-        expect_sent_event(ws_client, Dict{Any,Any}("id" => id_1, "value" => test_event_1.value))
-        expect_sent_event(ws_client, Dict{Any,Any}("id" => id_2, "value" => test_event_2.value))
+        DandelionSlack.send_event(rtm, test_event_1)
+        DandelionSlack.send_event(rtm, test_event_2)
     end
 
     context("Send close on user request") do
-        ws_client = MockWSClient()
         rtm = DandelionSlack.RTMClient(ws_client)
+
+        @expect ws_client stop(ws_client)
         DandelionSlack.close(rtm)
-        expect_close(ws_client)
     end
 
     context("Propagate events from WebSocket to RTM") do
@@ -295,15 +289,15 @@ end
 
 facts("RTM integration") do
     context("Send and receive events") do
-        url = Requests.URI("wss://some/url/to/rtm")
-        mock_ws = MockWSClient()
-        mock_handler = MockRTMHandler()
-        rtm_ws = nothing
-        function ws_client_factory(uri, handler)
-            actual_url = url
-            rtm_ws = handler
-            mock_ws
-        end
+        #url = Requests.URI("wss://some/url/to/rtm")
+        #mock_ws = MockWSClient()
+        #mock_handler = MockRTMHandler()
+        #rtm_ws = nothing
+        #function ws_client_factory(uri, handler)
+        #    actual_url = url
+        #    rtm_ws = handler
+        #    mock_ws
+        #end
 
         rtm_client = rtm_connect(mock_handler; requests=fake_requests)
 
@@ -337,7 +331,6 @@ facts("RTM integration") do
 
     context("Throttling of events") do
         url = Requests.URI("wss://some/url/to/rtm")
-        mock_ws = MockWSClient()
         mock_handler = MockRTMHandler()
         rtm_ws = nothing
         throttling_interval = 0.2
