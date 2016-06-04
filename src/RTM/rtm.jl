@@ -1,6 +1,12 @@
 export RTMHandler,
        rtm_connect,
-       send_event
+       send_event,
+       RTMClient,
+       on_reply,
+       on_event,
+       on_error,
+       on_disconnect,
+       on_connect
 
 using DandelionWebSockets
 import DandelionWebSockets: on_text, on_binary,
@@ -108,13 +114,23 @@ state_closing(t::RTMWebSocket) = nothing
 
 abstract AbstractRTMClient
 
+default_backoff = RandomizedBackoff(Backoff(5.0, 200.0), MersenneTwister(), 3.0)
+
+throttled_client_factory = handler -> ThrottledWSClient(WSClient(), 1.0)
+
 type RTMClient <: AbstractRTMClient
-    client::AbstractWSClient
+    ws_client::AbstractWSClient
     next_id::Int64
+    rtm_ws::RTMWebSocket
+    token::Token
 
-    # TODO: Keep an RTMWebSocket here?
-
-    RTMClient(client::AbstractWSClient) = new(client, 1)
+    function RTMClient(handler::RTMHandler, token::Token;
+                       connection_retry::AbstractRetry=Retry(default_backoff, x -> nothing),
+                       ws_client_factory=throttled_client_factory)
+        rtm_ws = RTMWebSocket(handler, connection_retry)
+        ws_client = ws_client_factory(rtm_ws)
+        c = new(ws_client, 1, rtm_ws, token)
+    end
 end
 
 function send_event(c::RTMClient, event::OutgoingEvent)
@@ -124,13 +140,16 @@ function send_event(c::RTMClient, event::OutgoingEvent)
     dict = serialize(event)
     dict["id"] = this_id
     text = utf8(JSON.json(dict))
-    send_text(c.client, text)
+    send_text(c.ws_client, text)
 
     this_id
 end
 
-close(c::RTMClient) = stop(c.client)
+close(c::RTMClient) = stop(c.ws_client)
 
-function rtm_connect(client::RTMClient)
-
+function rtm_connect(client::RTMClient;
+                     requests=requests)
+    status, response = makerequest(
+        RtmStart(client.token, Nullable(), Nullable(), Nullable()), requests)
+    wsconnect(client.ws_client, Requests.URI(response.url), client.rtm_ws)
 end

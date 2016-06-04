@@ -3,7 +3,8 @@ import Base.==
 export
     Self,
     Token,
-    SlackChannel
+    SlackChannel,
+    Team
 
 immutable Self
     id::UserId

@@ -1,6 +1,6 @@
 import Base: put!, take!, close
 import DandelionWebSockets: AbstractWSClient, ClientLogicInput, send_text, stop,
-                        handle
+                        handle, WebSocketHandler
 
 export ThrottledWSClient
 
@@ -34,3 +34,5 @@ function stop(ws::ThrottledWSClient)
 end
 
 send_text(ws::ThrottledWSClient, text::UTF8String) = put!(ws.chan, (send_text, [ws.ws, text]))
+wsconnect(client::ThrottledWSClient, uri::Requests.URI, handler::WebSocketHandler) =
+    wsconnect(client.ws, uri, handler)

@@ -3,7 +3,8 @@ using DandelionWebSockets
 import JSON
 import Base.==
 import DandelionSlack: on_event, on_reply, on_error, on_connect, on_disconnect,
-                       EventTimestamp, RTMWebSocket, send_text, stop
+                       EventTimestamp, RTMWebSocket, send_text, stop, RTMClient, makerequest,
+                       wsconnect
 import DandelionWebSockets: @mock, @mockfunction, @expect, Throws, mock_match
 import DandelionWebSockets: AbstractRetry, Retry, retry, reset
 
@@ -70,7 +71,8 @@ end
 ws_client = MockWSClient()
 @mockfunction(ws_client,
     send_text(::MockWSClient, ::UTF8String),
-    stop(::MockWSClient))
+    stop(::MockWSClient),
+    wsconnect(::MockWSClient, ::Requests.URI, ::WebSocketHandler))
 
 #
 # A mock RTMHandler to test that RTMWebSocket propagates messages correctly.
@@ -92,6 +94,8 @@ mock_handler = MockRTMHandler()
 immutable FakeRequests <: AbstractHttp end
 fake_requests = FakeRequests()
 
+post(::FakeRequests, uri::AbstractString; args...) = nothing
+
 abstract AbstractMocker
 @mock Mocker AbstractMocker
 mocker = Mocker()
@@ -100,6 +104,18 @@ mocker = Mocker()
 @mock MockRetry AbstractRetry
 mock_retry = MockRetry()
 @mockfunction mock_retry retry(::MockRetry) reset(::MockRetry)
+
+
+token = Token("ABCDEF")
+ok_status = Status(true, Nullable{UTF8String}(utf8("")), Nullable{UTF8String}(utf8("")))
+# `fake_url` is what we get back from Slck. `expected_fake_url` is what the Slack URL needs to be
+# converted to, in order to send it into Requests.
+fake_url = utf8("ws://some/url")
+expected_fake_url = Requests.URI("http://some/url")
+fake_self = Self(UserId("U0"), SlackName("User 0"), 123, utf8(""))
+fake_team = Team(TeamId("T0"), SlackName("Team 0"), utf8(""), utf8(""))
+fake_rtm_start_response = RtmStartResponse(fake_url, fake_self, fake_team,
+    [], [], [], Nullable{DandelionSlack.Mpim}(), [], [])
 
 #
 # Matching JSON
@@ -139,7 +155,8 @@ facts("RTM events") do
     end
 
     context("Increasing message id") do
-        rtm = DandelionSlack.RTMClient(ws_client)
+        rtm = DandelionSlack.RTMClient(mock_handler, token;
+                                       ws_client_factory=x -> ws_client)
 
         @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
         @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
@@ -153,7 +170,8 @@ facts("RTM events") do
     end
 
     context("Sending events") do
-        rtm = DandelionSlack.RTMClient(ws_client)
+        rtm = DandelionSlack.RTMClient(mock_handler, token;
+                                       ws_client_factory=x -> ws_client)
 
         @expect ws_client send_text(ws_client, JSONMatcher(
             Dict{Any,Any}("id" => 1, "value" => test_event_1.value)))
@@ -165,10 +183,11 @@ facts("RTM events") do
     end
 
     context("Send close on user request") do
-        rtm = DandelionSlack.RTMClient(ws_client)
+        rtm = DandelionSlack.RTMClient(mock_handler, token;
+                                       ws_client_factory=x -> ws_client)
 
         @expect ws_client stop(ws_client)
-        DandelionSlack.close(rtm)
+        close(rtm)
     end
 
     context("Propagate events from WebSocket to RTM") do
@@ -289,75 +308,79 @@ end
 
 facts("RTM integration") do
     context("Send and receive events") do
-        #url = Requests.URI("wss://some/url/to/rtm")
-        #mock_ws = MockWSClient()
-        #mock_handler = MockRTMHandler()
-        #rtm_ws = nothing
-        #function ws_client_factory(uri, handler)
-        #    actual_url = url
-        #    rtm_ws = handler
-        #    mock_ws
-        #end
+        rtm_client = RTMClient(mock_handler, token;
+                               connection_retry=mock_retry, ws_client_factory=x -> ws_client)
 
-        rtm_client = rtm_connect(mock_handler; requests=fake_requests)
+        # `fake_rtm_start_response` uses `fake_url` as the URL we should connect to.
+        @expect mocker makerequest(TypeMatcher(Any), fake_requests) (ok_status, fake_rtm_start_response)
+        @expect ws_client wsconnect(ws_client, Requests.URI(fake_url), rtm_client.rtm_ws)
+        rtm_connect(rtm_client; requests=fake_requests)
 
-        # TODO: expect makerequest(TypeMatcher(RtmStart), fake_requests)
-        #       Returns an OK reply.
+        # We will send two events from server to client, a HelloEvent and a message "A message".
+        @expect mock_handler on_event(mock_handler, HelloEvent())
+        @expect mock_handler on_event(mock_handler,
+            MessageEvent("A message", ChannelId("C0"), UserId("U0"), EventTimestamp("12345.6789")))
+
+        first_id = 1
+
+        # ... then send one event from client to server, and then send the reply to that message.
+        @expect ws_client send_text(ws_client, JSONMatcher(Dict{Any, Any}(
+            "id" => first_id, "type" => "message", "text" => "Hello", "channel" => "C0")))
+        @expect mock_handler on_reply(mock_handler, first_id,
+            MessageAckEvent("Hello", Nullable(ChannelId("C0")), true, EventTimestamp("12345.6789")))
 
         # These are fake events from the WebSocket
-        on_text(rtm_ws, utf8("""{"type": "hello"}"""))
-        on_text(rtm_ws, utf8(
+        on_text(rtm_client.rtm_ws, utf8("""{"type": "hello"}"""))
+        on_text(rtm_client.rtm_ws, utf8(
             """{"type": "message", "text": "A message", "channel": "C0", "user": "U0", "ts": "12345.6789"}"""))
 
         # Send a message, and then we fake a reply to it.
         m_id1 = send_event(rtm_client, OutgoingMessageEvent("Hello", ChannelId("C0")))
-        on_text(rtm_ws,
-            utf8("""{"ok": true, "reply_to": $(m_id1), "text": "Hello", "channel": "C0", "ts": "12345.6789"}"""))
+        on_text(rtm_client.rtm_ws,
+            utf8("""{"ok": true, "reply_to": $(first_id), "text": "Hello", "channel": "C0", "ts": "12345.6789"}"""))
 
-        # We don't expect any errors
-        @fact mock_handler.errors --> isempty
 
-        # Sleep because the channel needs to process the sent messages.
-        sleep(0.02)
-        # These are the events we expect.
-        expect_event(mock_handler, HelloEvent())
-        expect_event(mock_handler,
-            MessageEvent("A message", ChannelId("C0"), UserId("U0"), EventTimestamp("12345.6789")))
-        expect_sent_event(mock_ws, Dict{Any,Any}(
-            "id" => 1, "type" => "message", "text" => "Hello", "channel" => "C0"))
-        expect_reply(mock_handler, m_id1,
-            MessageAckEvent("Hello", Nullable(ChannelId("C0")), true, EventTimestamp("12345.6789")))
+        check(ws_client)
+        check(mocker)
+        check(mock_handler)
     end
 
     context("Throttling of events") do
-        url = Requests.URI("wss://some/url/to/rtm")
-        mock_handler = MockRTMHandler()
-        rtm_ws = nothing
-        throttling_interval = 0.2
-        function ws_client_factory(uri, handler)
-            rtm_ws = handler
-            mock_ws
-        end
+        throttling = 0.2
 
-        rtm_client = rtm_connect(url, mock_handler;
-            ws_client_factory=ws_client_factory,
-            throttling_interval=throttling_interval)
+        throttled_client = ThrottledWSClient(ws_client, throttling)
+        rtm_client = RTMClient(mock_handler, token;
+                               connection_retry=mock_retry,
+                               ws_client_factory=x -> throttled_client)
+
+        # `fake_rtm_start_response` uses `fake_url` as the URL we should connect to.
+        @expect mocker makerequest(TypeMatcher(Any), fake_requests) (ok_status, fake_rtm_start_response)
+        @expect ws_client wsconnect(ws_client, Requests.URI(fake_url), rtm_client.rtm_ws)
+        rtm_connect(rtm_client; requests=fake_requests)
 
         # Send messages and verify that they are throttled.
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+
         n = 5
         for i = 1:n
             send_event(rtm_client, OutgoingMessageEvent("Hello", ChannelId("C0")))
         end
+        sleep(0.01)
+        check(ws_client)
 
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
         # Wait for one throttling interval and verify that we haven't sent all messages yet.
-        sleep(throttling_interval)
-        @fact length(mock_ws.sent) < n --> true
+        sleep(throttling)
+        check(ws_client)
 
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
         # Sleep for the rest of the expected time and check that we have sent all messages.
-        sleep(throttling_interval * (n - 2) + 0.05)
-        @fact length(mock_ws.sent) --> n
+        sleep(throttling * (n - 2) + 0.05)
 
-        # We don't expect any errors
-        @fact mock_handler.errors --> isempty
+        check(ws_client)
+        check(mocker)
+        check(mock_handler)
     end
 end
