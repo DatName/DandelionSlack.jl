@@ -162,6 +162,8 @@ type RTMClient <: AbstractRTMClient
     end
 end
 
+show(io::IO, c::RTMClient) = show(io, "RTMClient($(c.next_id), $(c.token), $(c.rtm_ws))")
+
 function send_event(c::RTMClient, event::OutgoingEvent)
     this_id = c.next_id
     c.next_id += 1
@@ -178,12 +180,13 @@ close(c::RTMClient) = stop(c.ws_client)
 attach(c::RTMClient, handler::RTMHandler) = attach(c.rtm_ws, handler)
 
 function rtm_connect(client::RTMClient;
-                     requests=requests)
+                     requests=real_requests)
     try
         status, response = makerequest(
             RtmStart(client.token, Nullable(), Nullable(), Nullable()), requests)
         wsconnect(client.ws_client, Requests.URI(response.url), client.rtm_ws)
-    catch
+    catch ex
+        println("Exception when connecting: $ex")
         state_closed(client.rtm_ws)
     end
 end

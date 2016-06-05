@@ -24,7 +24,7 @@ token = find_token(team)
 
 channels_list = ChannelsList(token, Nullable{Int64}())
 try
-    status, response = makerequest(channels_list, requests)
+    status, response = makerequest(channels_list, real_requests)
     channel_index = findfirst(c -> c.name == name, response.channels)
     if channel_index == 0
         println("No channel named $(name) in team $(team)")

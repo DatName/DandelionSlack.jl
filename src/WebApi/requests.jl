@@ -1,4 +1,4 @@
-export requests
+export real_requests
 
 import Requests
 
@@ -14,4 +14,4 @@ type RequestsHttp <: AbstractHttp end
 post(::RequestsHttp, uri::AbstractString; args...) =
     RequestsHttpResponse(Requests.post(Requests.URI(uri); args...))
 
-requests = RequestsHttp()
+real_requests = RequestsHttp()

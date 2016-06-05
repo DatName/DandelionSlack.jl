@@ -1,6 +1,6 @@
 import Base: put!, take!, close
 import DandelionWebSockets: AbstractWSClient, ClientLogicInput, send_text, stop,
-                        handle, WebSocketHandler
+                        handle, WebSocketHandler, wsconnect
 
 export ThrottledWSClient
 
