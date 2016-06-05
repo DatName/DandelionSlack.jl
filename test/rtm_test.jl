@@ -4,9 +4,9 @@ import JSON
 import Base.==
 import DandelionSlack: on_event, on_reply, on_error, on_connect, on_disconnect,
                        EventTimestamp, RTMWebSocket, send_text, stop, RTMClient, makerequest,
-                       wsconnect
+                       wsconnect, HttpException
 import DandelionWebSockets: @mock, @mockfunction, @expect, Throws, mock_match
-import DandelionWebSockets: AbstractRetry, Retry, retry, reset
+import DandelionWebSockets: AbstractRetry, Retry, retry, reset, set_function
 
 #
 # A fake RTM event.
@@ -103,7 +103,7 @@ mocker = Mocker()
 
 @mock MockRetry AbstractRetry
 mock_retry = MockRetry()
-@mockfunction mock_retry retry(::MockRetry) reset(::MockRetry)
+@mockfunction mock_retry retry(::MockRetry) reset(::MockRetry) set_function(::MockRetry, ::Function)
 
 
 token = Token("ABCDEF")
@@ -155,7 +155,10 @@ facts("RTM events") do
     end
 
     context("Increasing message id") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
         rtm = DandelionSlack.RTMClient(mock_handler, token;
+                                       connection_retry=mock_retry,
                                        ws_client_factory=x -> ws_client)
 
         @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
@@ -167,10 +170,15 @@ facts("RTM events") do
         message_id_3 = DandelionSlack.send_event(rtm, FakeEvent())
 
         @fact message_id_1 < message_id_2 < message_id_3 --> true
+
+        check(mock_retry)
     end
 
     context("Sending events") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
         rtm = DandelionSlack.RTMClient(mock_handler, token;
+                                       connection_retry=mock_retry,
                                        ws_client_factory=x -> ws_client)
 
         @expect ws_client send_text(ws_client, JSONMatcher(
@@ -180,14 +188,21 @@ facts("RTM events") do
 
         DandelionSlack.send_event(rtm, test_event_1)
         DandelionSlack.send_event(rtm, test_event_2)
+
+        check(mock_retry)
     end
 
     context("Send close on user request") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
         rtm = DandelionSlack.RTMClient(mock_handler, token;
+                                       connection_retry=mock_retry,
                                        ws_client_factory=x -> ws_client)
 
         @expect ws_client stop(ws_client)
         close(rtm)
+
+        check(mock_retry)
     end
 
     context("Propagate events from WebSocket to RTM") do
@@ -200,6 +215,7 @@ facts("RTM events") do
             "text": "Hello", "user": "U0", "ts": "123"}"""))
 
         check(mock_handler)
+        check(mock_retry)
     end
 
     context("Message ack event") do
@@ -212,6 +228,7 @@ facts("RTM events") do
             utf8("""{"reply_to": 1, "ok": true, "text": "Hello", "channel": "C0", "ts": "123"}"""))
 
         check(mock_handler)
+        check(mock_retry)
     end
 
     context("Missing type key and not message ack") do
@@ -223,6 +240,7 @@ facts("RTM events") do
         on_text(rtm_ws, text)
 
         check(mock_handler)
+        check(mock_retry)
     end
 
 
@@ -235,6 +253,7 @@ facts("RTM events") do
         on_text(rtm_ws, text)
 
         check(mock_handler)
+        check(mock_retry)
     end
 
     context("Unknown message type") do
@@ -246,6 +265,7 @@ facts("RTM events") do
         on_text(rtm_ws, text)
 
         check(mock_handler)
+        check(mock_retry)
     end
 
     context("Missing required field") do
@@ -258,6 +278,7 @@ facts("RTM events") do
         on_text(rtm_ws, text)
 
         check(mock_handler)
+        check(mock_retry)
     end
 
     context("Error event from Slack") do
@@ -268,6 +289,7 @@ facts("RTM events") do
         on_text(rtm_ws,
             utf8("""{"type": "error", "error": {"code": 1, "msg": "Reason"}}"""))
 
+        check(mock_retry)
         check(mock_handler)
     end
 
@@ -303,11 +325,16 @@ facts("RTM events") do
         on_binary(rtm_ws, b"")
         state_connecting(rtm_ws)
         state_closing(rtm_ws)
+
+        check(mock_handler)
+        check(mock_retry)
     end
 end
 
-facts("RTM integration") do
+facts("RTMClient") do
     context("Send and receive events") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
         rtm_client = RTMClient(mock_handler, token;
                                connection_retry=mock_retry, ws_client_factory=x -> ws_client)
 
@@ -343,12 +370,48 @@ facts("RTM integration") do
         check(ws_client)
         check(mocker)
         check(mock_handler)
+        check(mock_retry)
+    end
+
+    context("Connection failed due to exception") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
+        rtm_client = RTMClient(mock_handler, token;
+                               connection_retry=mock_retry,
+                               ws_client_factory=x -> ws_client)
+
+        # `fake_rtm_start_response` uses `fake_url` as the URL we should connect to.
+        @expect mocker makerequest(TypeMatcher(Any), fake_requests) Throws(HttpException())
+        @expect mock_handler on_disconnect(mock_handler)
+        @expect mock_retry retry(mock_retry)
+        rtm_connect(rtm_client; requests=fake_requests)
+
+        check(ws_client)
+        check(mocker)
+        check(mock_handler)
+        check(mock_retry)
+    end
+
+    context("Set retry function to rtm_connect") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
+        rtm_client = RTMClient(mock_handler, token;
+                               connection_retry=mock_retry,
+                               ws_client_factory=x -> ws_client)
+
+        check(ws_client)
+        check(mocker)
+        check(mock_handler)
+        check(mock_retry)
     end
 
     context("Throttling of events") do
         throttling = 0.2
 
         throttled_client = ThrottledWSClient(ws_client, throttling)
+
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
         rtm_client = RTMClient(mock_handler, token;
                                connection_retry=mock_retry,
                                ws_client_factory=x -> throttled_client)
@@ -382,5 +445,6 @@ facts("RTM integration") do
         check(ws_client)
         check(mocker)
         check(mock_handler)
+        check(mock_retry)
     end
 end

@@ -130,6 +130,8 @@ type RTMClient <: AbstractRTMClient
         rtm_ws = RTMWebSocket(handler, connection_retry)
         ws_client = ws_client_factory(rtm_ws)
         c = new(ws_client, 1, rtm_ws, token)
+        set_function(connection_retry, () -> rtm_connect(c))
+        c
     end
 end
 
@@ -149,7 +151,11 @@ close(c::RTMClient) = stop(c.ws_client)
 
 function rtm_connect(client::RTMClient;
                      requests=requests)
-    status, response = makerequest(
-        RtmStart(client.token, Nullable(), Nullable(), Nullable()), requests)
-    wsconnect(client.ws_client, Requests.URI(response.url), client.rtm_ws)
+    try
+        status, response = makerequest(
+            RtmStart(client.token, Nullable(), Nullable(), Nullable()), requests)
+        wsconnect(client.ws_client, Requests.URI(response.url), client.rtm_ws)
+    catch
+        state_closed(client.rtm_ws)
+    end
 end
