@@ -154,59 +154,9 @@ facts("RTM events") do
         @fact message --> MessageEvent(utf8("Hello"), ChannelId("C0"), UserId("U0"), EventTimestamp("123"))
     end
 
-    context("Increasing message id") do
-        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
-
-        rtm = DandelionSlack.RTMClient(mock_handler, token;
-                                       connection_retry=mock_retry,
-                                       ws_client_factory=x -> ws_client)
-
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
-
-        message_id_1 = DandelionSlack.send_event(rtm, FakeEvent())
-        message_id_2 = DandelionSlack.send_event(rtm, FakeEvent())
-        message_id_3 = DandelionSlack.send_event(rtm, FakeEvent())
-
-        @fact message_id_1 < message_id_2 < message_id_3 --> true
-
-        check(mock_retry)
-    end
-
-    context("Sending events") do
-        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
-
-        rtm = DandelionSlack.RTMClient(mock_handler, token;
-                                       connection_retry=mock_retry,
-                                       ws_client_factory=x -> ws_client)
-
-        @expect ws_client send_text(ws_client, JSONMatcher(
-            Dict{Any,Any}("id" => 1, "value" => test_event_1.value)))
-        @expect ws_client send_text(ws_client, JSONMatcher(
-            Dict{Any,Any}("id" => 2, "value" => test_event_2.value)))
-
-        DandelionSlack.send_event(rtm, test_event_1)
-        DandelionSlack.send_event(rtm, test_event_2)
-
-        check(mock_retry)
-    end
-
-    context("Send close on user request") do
-        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
-
-        rtm = DandelionSlack.RTMClient(mock_handler, token;
-                                       connection_retry=mock_retry,
-                                       ws_client_factory=x -> ws_client)
-
-        @expect ws_client stop(ws_client)
-        close(rtm)
-
-        check(mock_retry)
-    end
-
     context("Propagate events from WebSocket to RTM") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
 
         @expect mock_handler on_event(mock_handler,
             MessageEvent(utf8("Hello"), ChannelId(utf8("C0")), UserId("U0"), EventTimestamp("123")))
@@ -219,7 +169,8 @@ facts("RTM events") do
     end
 
     context("Message ack event") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
 
         @expect mock_handler on_reply(mock_handler, 1,
             MessageAckEvent(utf8("Hello"), Nullable(ChannelId("C0")), true, EventTimestamp("123")))
@@ -232,7 +183,8 @@ facts("RTM events") do
     end
 
     context("Missing type key and not message ack") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
 
         text = utf8("""{"reply_to": 1}""")
         @expect mock_handler on_error(mock_handler, MissingTypeError(text))
@@ -245,7 +197,9 @@ facts("RTM events") do
 
 
     context("Invalid JSON") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
+
         text = utf8("""{"reply_to" foobarbaz""")
 
         @expect mock_handler on_error(mock_handler, InvalidJSONError(text))
@@ -257,7 +211,9 @@ facts("RTM events") do
     end
 
     context("Unknown message type") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
+
         text = utf8("""{"type": "nosuchtype"}""")
 
         @expect mock_handler on_error(mock_handler, UnknownEventTypeError(text, utf8("nosuchtype")))
@@ -269,7 +225,9 @@ facts("RTM events") do
     end
 
     context("Missing required field") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
+
         # No "text" field.
         text = utf8("""{"type": "message", "channel": "C0", "user": "U0", "ts": "123"}""")
 
@@ -282,7 +240,8 @@ facts("RTM events") do
     end
 
     context("Error event from Slack") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
 
         @expect mock_handler on_event(mock_handler, ErrorEvent(RTMError(1, "Reason")))
 
@@ -294,7 +253,8 @@ facts("RTM events") do
     end
 
     context("Retry connection on WebSocket close") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
 
         @expect mock_handler on_disconnect(mock_handler)
         @expect mock_retry retry(mock_retry)
@@ -306,7 +266,8 @@ facts("RTM events") do
     end
 
     context("Successful connection") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
 
         @expect mock_handler on_connect(mock_handler)
         @expect mock_retry reset(mock_retry)
@@ -320,7 +281,8 @@ facts("RTM events") do
     # This only tests that the callback functions exist, not that they actually do anything.
     # This is mostly for coverage.
     context("Existence of the rest of WebSocketHandler interface functions") do
-        rtm_ws = RTMWebSocket(mock_handler, mock_retry)
+        rtm_ws = RTMWebSocket(mock_retry)
+        attach(rtm_ws, mock_handler)
 
         on_binary(rtm_ws, b"")
         state_connecting(rtm_ws)
@@ -335,8 +297,9 @@ facts("RTMClient") do
     context("Send and receive events") do
         @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
 
-        rtm_client = RTMClient(mock_handler, token;
+        rtm_client = RTMClient(token;
                                connection_retry=mock_retry, ws_client_factory=x -> ws_client)
+        attach(rtm_client, mock_handler)
 
         # `fake_rtm_start_response` uses `fake_url` as the URL we should connect to.
         @expect mocker makerequest(TypeMatcher(Any), fake_requests) (ok_status, fake_rtm_start_response)
@@ -376,9 +339,10 @@ facts("RTMClient") do
     context("Connection failed due to exception") do
         @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
 
-        rtm_client = RTMClient(mock_handler, token;
+        rtm_client = RTMClient(token;
                                connection_retry=mock_retry,
                                ws_client_factory=x -> ws_client)
+        attach(rtm_client, mock_handler)
 
         # `fake_rtm_start_response` uses `fake_url` as the URL we should connect to.
         @expect mocker makerequest(TypeMatcher(Any), fake_requests) Throws(HttpException())
@@ -395,13 +359,68 @@ facts("RTMClient") do
     context("Set retry function to rtm_connect") do
         @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
 
-        rtm_client = RTMClient(mock_handler, token;
+        rtm_client = RTMClient(token;
                                connection_retry=mock_retry,
                                ws_client_factory=x -> ws_client)
+        attach(rtm_client, mock_handler)
 
         check(ws_client)
         check(mocker)
         check(mock_handler)
+        check(mock_retry)
+    end
+
+    context("Sending events") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
+        rtm = DandelionSlack.RTMClient(token;
+                                       connection_retry=mock_retry,
+                                       ws_client_factory=x -> ws_client)
+        attach(rtm, mock_handler)
+
+        @expect ws_client send_text(ws_client, JSONMatcher(
+            Dict{Any,Any}("id" => 1, "value" => test_event_1.value)))
+        @expect ws_client send_text(ws_client, JSONMatcher(
+            Dict{Any,Any}("id" => 2, "value" => test_event_2.value)))
+
+        DandelionSlack.send_event(rtm, test_event_1)
+        DandelionSlack.send_event(rtm, test_event_2)
+
+        check(mock_retry)
+    end
+
+    context("Send close on user request") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
+        rtm = DandelionSlack.RTMClient(token;
+                                       connection_retry=mock_retry,
+                                       ws_client_factory=x -> ws_client)
+        attach(rtm, mock_handler)
+
+        @expect ws_client stop(ws_client)
+        close(rtm)
+
+        check(mock_retry)
+    end
+
+    context("Increasing message id") do
+        @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
+
+        rtm = DandelionSlack.RTMClient(token;
+                                       connection_retry=mock_retry,
+                                       ws_client_factory=x -> ws_client)
+        attach(rtm, mock_handler)
+
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+
+        message_id_1 = DandelionSlack.send_event(rtm, FakeEvent())
+        message_id_2 = DandelionSlack.send_event(rtm, FakeEvent())
+        message_id_3 = DandelionSlack.send_event(rtm, FakeEvent())
+
+        @fact message_id_1 < message_id_2 < message_id_3 --> true
+
         check(mock_retry)
     end
 
@@ -412,9 +431,10 @@ facts("RTMClient") do
 
         @expect mock_retry set_function(mock_retry, TypeMatcher(Function))
 
-        rtm_client = RTMClient(mock_handler, token;
+        rtm_client = RTMClient(token;
                                connection_retry=mock_retry,
                                ws_client_factory=x -> throttled_client)
+        attach(rtm_client, mock_handler)
 
         # `fake_rtm_start_response` uses `fake_url` as the URL we should connect to.
         @expect mocker makerequest(TypeMatcher(Any), fake_requests) (ok_status, fake_rtm_start_response)

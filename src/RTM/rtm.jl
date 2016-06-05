@@ -6,7 +6,8 @@ export RTMHandler,
        on_event,
        on_error,
        on_disconnect,
-       on_connect
+       on_connect,
+       attach
 
 using DandelionWebSockets
 import DandelionWebSockets: on_text, on_binary,
@@ -35,12 +36,36 @@ on_disconnect(h::RTMHandler) = error("on_disconnect not implemented for $(h)")
 on_connect(h::RTMHandler) = error("on_connect not implemented for $(h)")
 
 #
+#
+#
+immutable UnsetRTMHandler <: RTMHandler end
+
+on_reply(h::UnsetRTMHandler, id::Int, event::Event) =
+    error("No RTM handler set! Call attach(::RTMClient, ::RTMHandler) before connect")
+
+on_event(h::UnsetRTMHandler, event::Event) =
+    error("No RTM handler set! Call attach(::RTMClient, ::RTMHandler) before connect")
+
+# on error is called when there is a problem with receiving the message, such as invalid JSON.
+# This is not an error sent by Slack, but an error caught in this code.
+on_error(h::UnsetRTMHandler, e::EventError) =
+    error("No RTM handler set! Call attach(::RTMClient, ::RTMHandler) before connect")
+
+on_disconnect(h::UnsetRTMHandler) =
+    error("No RTM handler set! Call attach(::RTMClient, ::RTMHandler) before connect")
+
+on_connect(h::UnsetRTMHandler) =
+    error("No RTM handler set! Call attach(::RTMClient, ::RTMHandler) before connect")
+
+#
 # RTMWebSocketHandler takes events from a WebSocket connection and converts to RTM events.
 #
 
 type RTMWebSocket <: WebSocketHandler
     handler::RTMHandler
     connection_retry::AbstractRetry
+
+    RTMWebSocket(retry::AbstractRetry) = new(UnsetRTMHandler(), retry)
 end
 
 function on_text(rtm::RTMWebSocket, text::UTF8String)
@@ -108,6 +133,8 @@ on_binary(::RTMWebSocket, ::Vector{UInt8}) = nothing
 state_connecting(::RTMWebSocket) = nothing
 state_closing(t::RTMWebSocket) = nothing
 
+attach(t::RTMWebSocket, handler::RTMHandler) = t.handler = handler
+
 #
 # RTMClient is an object for sending events to Slack.
 #
@@ -124,10 +151,10 @@ type RTMClient <: AbstractRTMClient
     rtm_ws::RTMWebSocket
     token::Token
 
-    function RTMClient(handler::RTMHandler, token::Token;
+    function RTMClient(token::Token;
                        connection_retry::AbstractRetry=Retry(default_backoff, x -> nothing),
                        ws_client_factory=throttled_client_factory)
-        rtm_ws = RTMWebSocket(handler, connection_retry)
+        rtm_ws = RTMWebSocket(connection_retry)
         ws_client = ws_client_factory(rtm_ws)
         c = new(ws_client, 1, rtm_ws, token)
         set_function(connection_retry, () -> rtm_connect(c))
@@ -148,6 +175,7 @@ function send_event(c::RTMClient, event::OutgoingEvent)
 end
 
 close(c::RTMClient) = stop(c.ws_client)
+attach(c::RTMClient, handler::RTMHandler) = attach(c.rtm_ws, handler)
 
 function rtm_connect(client::RTMClient;
                      requests=requests)
