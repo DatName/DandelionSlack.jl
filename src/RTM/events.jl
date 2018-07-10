@@ -1,11 +1,11 @@
 export Event
 
-abstract OutgoingEvent
-abstract Event
+abstract type OutgoingEvent end
+abstract type Event end
 
 macro slackevent(event_type::Symbol, event_name::AbstractString, event_block::Expr)
     quote
-        immutable $event_type <: Event
+        struct $event_type <: Event
             $(event_block.args...)
         end
 
@@ -15,7 +15,7 @@ end
 
 macro slackoutevent(event_type::Symbol, event_name::AbstractString, event_block::Expr)
     quote
-        immutable $event_type <: OutgoingEvent
+        struct $event_type <: OutgoingEvent
             $(event_block.args...)
         end
 
@@ -24,7 +24,7 @@ macro slackoutevent(event_type::Symbol, event_name::AbstractString, event_block:
 end
 
 function serialize(e::OutgoingEvent)
-    s = Dict{UTF8String, Any}(
+    s = Dict{String, Any}(
         utf8("type") => outgoing_event_name(typeof(e)))
     for f in fieldnames(e)
         s[utf8(string(f))] = getfield(e, f)

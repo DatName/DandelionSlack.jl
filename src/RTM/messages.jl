@@ -4,13 +4,13 @@ export OutgoingMessageEvent,
 
 @slackoutevent(OutgoingMessageEvent, "message",
     begin
-        text::UTF8String
+        text::String
         channel::ChannelId
     end)
 
 @slackevent(MessageEvent, "message",
     begin
-        text::UTF8String
+        text::String
         channel::ChannelId
         user::UserId
         ts::EventTimestamp
@@ -18,8 +18,8 @@ export OutgoingMessageEvent,
 
 @slackevent(MessageAckEvent, "message_ack",
     begin
-        text::UTF8String
-        channel::Nullable{UTF8String}
+        text::String
+        channel::Nullable{String}
         ok::Bool
         ts::EventTimestamp
     end)

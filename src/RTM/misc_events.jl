@@ -7,9 +7,9 @@ export HelloEvent,
 
 @slackoutevent(OutgoingPingEvent, "ping", begin end)
 
-immutable RTMError
+struct RTMError
     code::Int64
-    msg::UTF8String
+    msg::String
 end
 
 @slackevent(ErrorEvent, "error", begin
@@ -17,7 +17,7 @@ end
     end)
 
 @slackevent(PresenceChangeEvent, "presence_change", begin
-        presence::UTF8String
+        presence::String
         user::UserId
     end)
 
@@ -27,5 +27,5 @@ end
     end)
 
 @slackevent(ReconnectUrlEvent, "reconnect_url", begin
-        url::UTF8String
+        url::String
     end)

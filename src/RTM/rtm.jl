@@ -19,7 +19,7 @@ import JSON
 # RTMHandler defines an interface for handling RTM events.
 #
 
-abstract RTMHandler
+abstract type RTMHandler end
 
 on_reply(h::RTMHandler, id::Int, event::Event) =
     error("on_reply not implemented for $(h) and/or $(event)")
@@ -61,14 +61,14 @@ on_connect(h::UnsetRTMHandler) =
 # RTMWebSocketHandler takes events from a WebSocket connection and converts to RTM events.
 #
 
-type RTMWebSocket <: WebSocketHandler
+mutable struct RTMWebSocket <: WebSocketHandler
     handler::RTMHandler
     connection_retry::AbstractRetry
 
     RTMWebSocket(retry::AbstractRetry) = new(UnsetRTMHandler(), retry)
 end
 
-function on_text(rtm::RTMWebSocket, text::UTF8String)
+function on_text(rtm::RTMWebSocket, text::String)
     dict::Dict{AbstractString, Any} = Dict()
     try
         dict = JSON.parse(text)
@@ -139,13 +139,13 @@ attach(t::RTMWebSocket, handler::RTMHandler) = t.handler = handler
 # RTMClient is an object for sending events to Slack.
 #
 
-abstract AbstractRTMClient
+abstract type AbstractRTMClient end
 
-default_backoff = RandomizedBackoff(Backoff(5.0, 200.0), MersenneTwister(), 3.0)
+default_backoff = RandomizedBackoff(Backoff(5.0, 200.0), MersenneTwister(0), 3.0)
 
 throttled_client_factory = handler -> ThrottledWSClient(WSClient(), 1.0)
 
-type RTMClient <: AbstractRTMClient
+mutable struct RTMClient <: AbstractRTMClient
     ws_client::AbstractWSClient
     next_id::Int64
     rtm_ws::RTMWebSocket

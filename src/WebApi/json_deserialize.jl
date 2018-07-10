@@ -9,7 +9,7 @@ export deserialize
 # using Base.Test
 #
 # type Foo
-#    bar::UTF8String
+#    bar::String
 # end
 #
 # @test DandelionSlack.deserialize(Foo, """{"bar": "baz"}""") == Foo("baz")

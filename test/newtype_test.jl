@@ -1,10 +1,10 @@
 @newimmutable NewFoo{T} <: Integer
 @newtype NewBar{T <: AbstractString} <: AbstractString
 
-@newimmutable NewBaz <: UTF8String
+@newimmutable NewBaz <: String
 @stringinterface NewBaz
 
-@newtype NewQux <: UTF8String
+@newtype NewQux <: String
 @stringinterface NewBaz
 
 @newtype NewFnord <: Int64
@@ -20,16 +20,16 @@ facts("New types") do
     @fact typeof(newfoo.v) --> Int
     @fact newfoo.v         --> 1
 
-    newbar = NewBar{UTF8String}(utf8("bar"))
-    @fact typeof(newbar.v) --> UTF8String
+    newbar = NewBar{String}(utf8("bar"))
+    @fact typeof(newbar.v) --> String
     @fact newbar.v         --> utf8("bar")
 
     newbaz = NewBaz(utf8("baz"))
-    @fact typeof(newbaz.v) --> UTF8String
+    @fact typeof(newbaz.v) --> String
     @fact_throws MethodError NewBaz(1)
 
     newqux = NewQux(utf8("qux"))
-    @fact typeof(newqux.v) --> UTF8String
+    @fact typeof(newqux.v) --> String
     @fact newqux.v --> utf8("qux")
     newqux.v = "qux2"
     @fact newqux.v --> utf8("qux2")

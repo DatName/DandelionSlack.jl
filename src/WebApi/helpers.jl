@@ -28,12 +28,12 @@ macro slackmethod(req_type::Symbol, method_name::AbstractString, req_block::Expr
     local resp_type = Symbol(string(req_type) * "Response")
 
     quote
-        immutable $req_type
+        struct $req_type
             token::Token
             $(req_block.args...)
         end
 
-        immutable $resp_type
+        struct $resp_type
             $(resp_block.args...)
         end
 
@@ -41,4 +41,3 @@ macro slackmethod(req_type::Symbol, method_name::AbstractString, req_block::Expr
         $(esc(:method_name))(::Type{$(esc(req_type))}) = $method_name
     end
 end
-

@@ -6,11 +6,11 @@ export
     SlackChannel,
     Team
 
-immutable Self
+struct Self
     id::UserId
     name::SlackName
     created::UInt64
-    manual_presence::UTF8String
+    manual_presence::String
 end
 
 function ==(a::Self, b::Self)
@@ -18,26 +18,26 @@ function ==(a::Self, b::Self)
         a.manual_presence == b.manual_presence
 end
 
-immutable Team
+struct Team
     id::TeamId
     name::SlackName
-    email_domain::UTF8String
-    domain::UTF8String
+    email_domain::String
+    domain::String
 end
 
-immutable Profile
+struct Profile
     first_name::Nullable{SlackName}
     last_name::Nullable{SlackName}
     real_name::SlackName
-    email::Nullable{UTF8String}
-    skype::Nullable{UTF8String}
+    email::Nullable{String}
+    skype::Nullable{String}
 end
 
-immutable User
+struct User
     id::UserId
     name::SlackName
     deleted::Bool
-    color::Nullable{UTF8String}
+    color::Nullable{String}
     profile::Profile
     is_admin::Nullable{Bool}
     is_owner::Nullable{Bool}
@@ -45,36 +45,36 @@ immutable User
     is_restricted::Nullable{Bool}
     is_ultra_restricted::Nullable{Bool}
     has_2fa::Nullable{Bool}
-    two_factor_type::Nullable{UTF8String}
+    two_factor_type::Nullable{String}
     has_files::Nullable{Bool}
 end
 
-immutable Topic
-    value::UTF8String
-    creator::UTF8String
+struct Topic
+    value::String
+    creator::String
     last_set::UInt64
 end
 
-immutable Purpose
-    value::UTF8String
-    creator::UTF8String
+struct Purpose
+    value::String
+    creator::String
     last_set::UInt64
 end
 
-immutable Icons
-    image_36::UTF8String
-    image_48::UTF8String
-    image_72::UTF8String
+struct Icons
+    image_36::String
+    image_48::String
+    image_72::String
 end
 
-immutable Message
-    type_::UTF8String
+struct Message
+    type_::String
     user::UserId
-    text::UTF8String
-    ts::UTF8String
+    text::String
+    ts::String
 end
 
-immutable Mpim
+struct Mpim
     id::GroupId
     name::MpimName
     is_mpim::Bool
@@ -82,13 +82,13 @@ immutable Mpim
     created::Timestamp
     creator::UserId
     members::Vector{UserId}
-    last_read::UTF8String
+    last_read::String
     latest::Message
     unread_count::UInt64
     unread_count_display::UInt64
 end
 
-immutable Im
+struct Im
     id::ImId
     is_im::Bool
     user::UserId
@@ -96,27 +96,27 @@ immutable Im
     is_user_deleted::Nullable{Bool}
 end
 
-immutable SlackChannel
+struct SlackChannel
     id::ChannelId
     name::SlackName
     is_channel::Bool
     created::UInt64
-    creator::UTF8String
+    creator::String
     is_archived::Bool
     is_general::Bool
-    members::Nullable{Vector{UTF8String}}
+    members::Nullable{Vector{String}}
     topic::Nullable{Topic}
     purpose::Nullable{Purpose}
     is_member::Bool
-    last_read::Nullable{UTF8String}
+    last_read::Nullable{String}
     unread_count::Nullable{UInt64}
     unread_count_display::Nullable{UInt64}
 end
 
-immutable Group
+struct Group
     id::GroupId
     name::SlackName
-    is_group::UTF8String
+    is_group::String
     created::Timestamp
     creator::UserId
     is_archived::Bool
@@ -125,13 +125,13 @@ immutable Group
     topic::Topic
     purpose::Purpose
 
-    last_read::Nullable{UTF8String}
+    last_read::Nullable{String}
     latest::Nullable{Message}
     unread_count::Nullable{UInt64}
     unread_count_display::Nullable{UInt64}
 end
 
-immutable Bot
+struct Bot
     id::BotId
     deleted::Bool
     name::BotName

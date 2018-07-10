@@ -8,23 +8,23 @@ facts("WebApi query") do
         "no_unreads" => "2",
         "mpim_aware" => "3")
 
-    @fact toquery(RtmStart(Token(utf8("foo")), utf8("1"), utf8("2"), Nullable{UTF8String}())) --> Dict(
+    @fact toquery(RtmStart(Token(utf8("foo")), utf8("1"), utf8("2"), Nullable{String}())) --> Dict(
         "token" => "foo",
         "simple_latest" => "1",
         "no_unreads" => "2")
 
-    @fact toquery(RtmStart(Token(utf8("foo")), utf8("1"), Nullable{UTF8String}(), Nullable{UTF8String}())) -->
+    @fact toquery(RtmStart(Token(utf8("foo")), utf8("1"), Nullable{String}(), Nullable{String}())) -->
         Dict("token" => "foo", "simple_latest" => "1")
 end
 
 # Define a fake method, so we don't have to use an actual Slack method,
 # because they're complex.
 immutable FakeMethod
-    token::UTF8String
+    token::String
 end
 
 immutable FakeMethodResponse
-    url::UTF8String
+    url::String
 end
 
 DandelionSlack.getresponsetype(::Type{FakeMethod}) = FakeMethodResponse

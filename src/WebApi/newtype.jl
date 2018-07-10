@@ -21,7 +21,7 @@ function inner_type_from_type_expr(typedef)
         # First argument is a symbol, like Foo in "@newtype Foo <: AbstractsString". That means it's
         # not a generic expression. In that case we default to using the supertype (here
         # AbstractString) as inner type.
-        field_type = typedef.args[3]
+        field_type = typedef.args[2]
     else
         # First argument is an expression, like Foo{T} in "@newtype Foo{T} <: AbstractString". That
         # means it's a generic expression, so we use the T in Foo{T} or Foo{T <: AbstractString} as
@@ -49,20 +49,19 @@ end
 # However, if the supertype is a concrete type, then we cannot subclass it, since Julia doesn't
 # allow that. In this case we interpret it to mean that we want the inner type to be that cóncrete
 # type, and we'll use the same supertype as the super type of the concrete type.
-# For instance, ```Foo <: UTF8String``` will create a new type:
+# For instance, ```Foo <: String``` will create a new type:
 # ```
 # immutable Foo <: AbstractString
-#   v::UTF8String
+#   v::String
 # end
 # ```
-# because ```UTF8String <: AbstractString```.
+# because ```String <: AbstractString```.
 function determine_types(typedef)
-    local sname = typedef.args[3]
-    local supertype = eval(sname)
+    local sname = typedef.args[2]
     if isleaftype(supertype)
-        return sname, super(supertype)
+        return sname, supertype(eval(sname))
     else
-        return inner_type_from_type_expr(typedef), sname
+        return inner_type_from_type_expr(typedef), supertype(eval(sname))
     end
 end
 
@@ -72,7 +71,7 @@ macro newtype(typedef)
     local inner_type = mytypes[1]
     local sname = mytypes[2]
     quote
-        type $tname <: $sname
+        mutable struct $tname <: $sname
             v::$(inner_type)
         end
     end
@@ -84,7 +83,7 @@ macro newimmutable(typedef)
     local inner_type = mytypes[1]
     local sname = mytypes[2]
     quote
-        immutable $tname <: $sname
+        struct $tname <: $sname
             v::$(inner_type)
         end
     end

@@ -38,7 +38,7 @@ export
 
 @slackmethod(ChannelsJoin, "channels.join",
     begin
-        name::UTF8String
+        name::String
     end,
 
     begin

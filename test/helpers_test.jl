@@ -5,7 +5,7 @@
     end,
 
     begin
-        b::UTF8String
+        b::String
         c::Int64
     end)
 

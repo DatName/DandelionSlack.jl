@@ -17,7 +17,7 @@ immutable Baz
 end
 
 immutable Qux
-    buzz::Nullable{UTF8String}
+    buzz::Nullable{String}
     bar::Bar
 end
 
@@ -61,7 +61,7 @@ end
 
 @test DandelionSlack.deserialize(Foo, input) == Foo(Bar(17))
 @test DandelionSlack.deserialize(Baz, input) == Baz(Nullable(3.14), Bar(17))
-@test DandelionSlack.deserialize(Qux, input) == Qux(Nullable{UTF8String}(),Bar(17))
+@test DandelionSlack.deserialize(Qux, input) == Qux(Nullable{String}(),Bar(17))
 
 facts("JSON deserialization") do
     # Testing this function

@@ -1,12 +1,12 @@
 import DandelionWebSockets: AbstractWSClient, stop, send_text, send_binary
 
 type MockThrottlingWSClient <: AbstractWSClient
-    sent::Vector{UTF8String}
+    sent::Vector{String}
     bin_send::Vector{Vector{UInt8}}
     closed_called::Int
 
     function MockThrottlingWSClient()
-        new(Vector{UTF8String}(), Vector{Vector{UInt8}}(), 0)
+        new(Vector{String}(), Vector{Vector{UInt8}}(), 0)
     end
 end
 
@@ -14,9 +14,9 @@ function stop(c::MockThrottlingWSClient)
     c.closed_called += 1
 end
 
-send_text(c::MockThrottlingWSClient, s::UTF8String) = push!(c.sent, s)
+send_text(c::MockThrottlingWSClient, s::String) = push!(c.sent, s)
 
-function expect(c::MockThrottlingWSClient, s::UTF8String)
+function expect(c::MockThrottlingWSClient, s::String)
     if isempty(c.sent)
         error("Expected sent to have at least one element, with text '$s'")
     end

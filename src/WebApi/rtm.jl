@@ -6,13 +6,13 @@ import Base.==
 
 @slackmethod(RtmStart, "rtm.start",
 begin
-    simple_latest::Nullable{UTF8String}
-    no_unreads::Nullable{UTF8String}
-    mpim_aware::Nullable{UTF8String}
+    simple_latest::Nullable{String}
+    no_unreads::Nullable{String}
+    mpim_aware::Nullable{String}
 end,
 
 begin
-    url::UTF8String
+    url::String
     self::Self
     team::Team
     users::Vector{User}

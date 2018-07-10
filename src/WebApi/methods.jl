@@ -7,16 +7,16 @@ export makerequest
 
 import Base.==
 
-abstract AbstractHttp
-abstract AbstractHttpResponse
+abstract type AbstractHttp end
+abstract type AbstractHttpResponse end
 
 statuscode(r::AbstractHttpResponse) = r.status
 text(r::AbstractHttpResponse) = r.text
 
-immutable Status
+struct Status
     ok::Bool
-    error::Nullable{UTF8String}
-    warnings::Nullable{UTF8String}
+    error::Nullable{String}
+    warnings::Nullable{String}
 end
 
 function nulleq{T}(a::Nullable{T}, b::Nullable{T})
@@ -27,10 +27,10 @@ function ==(a::Status, b::Status)
     nulleq(a.error, b.error) && nulleq(a.warnings, b.warnings) && a.ok == b.ok
 end
 
-type RequestException <: Exception
-    error::UTF8String
+mutable struct RequestException <: Exception
+    error::String
 end
-type HttpException <: Exception end
+mutable struct HttpException <: Exception end
 
 function makerequest(m::Any, http::AbstractHttp)
     query_vars = toquery(m)

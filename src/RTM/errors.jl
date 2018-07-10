@@ -4,23 +4,23 @@ export EventError,
        MissingTypeError,
        InvalidJSONError
 
-abstract EventError
+abstract type EventError end
 
-immutable DeserializationError <: EventError
-    key::UTF8String
-    text::UTF8String
+struct DeserializationError <: EventError
+    key::String
+    text::String
     event_type::DataType
 end
 
-immutable UnknownEventTypeError <: EventError
-    text::UTF8String
-    event_type::UTF8String
+struct UnknownEventTypeError <: EventError
+    text::String
+    event_type::String
 end
 
-immutable MissingTypeError <: EventError
-    text::UTF8String
+struct MissingTypeError <: EventError
+    text::String
 end
 
-immutable InvalidJSONError <: EventError
-    text::UTF8String
+struct InvalidJSONError <: EventError
+    text::String
 end

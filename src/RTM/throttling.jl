@@ -4,11 +4,11 @@ import DandelionWebSockets: AbstractWSClient, ClientLogicInput, send_text, stop,
 
 export ThrottledWSClient
 
-typealias WSCall Tuple{Function, Vector{Any}}
+const WSCall = Tuple{Function, Vector{Any}}
 
 # ThrottledWSClient is a throttling proxy for an AbstractWSClient. It ensures that
 # messages are not sent too often.
-immutable ThrottledWSClient <: AbstractWSClient
+struct ThrottledWSClient <: AbstractWSClient
     ws::AbstractWSClient
     chan::Channel{WSCall}
 
@@ -33,6 +33,6 @@ function stop(ws::ThrottledWSClient)
     close(ws.chan)
 end
 
-send_text(ws::ThrottledWSClient, text::UTF8String) = put!(ws.chan, (send_text, [ws.ws, text]))
+send_text(ws::ThrottledWSClient, text::String) = put!(ws.chan, (send_text, [ws.ws, text]))
 wsconnect(client::ThrottledWSClient, uri::Requests.URI, handler::WebSocketHandler) =
     wsconnect(client.ws, uri, handler)

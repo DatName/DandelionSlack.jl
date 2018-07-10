@@ -12,8 +12,8 @@ import DandelionWebSockets: AbstractRetry, Retry, retry, reset, set_function
 # A fake RTM event.
 #
 
-immutable FakeEvent <: DandelionSlack.OutgoingEvent
-    value::UTF8String
+struct FakeEvent <: DandelionSlack.OutgoingEvent
+    value::String
 
     FakeEvent() = new("")
     FakeEvent(a::ASCIIString) = new(utf8(a))
@@ -70,7 +70,7 @@ end
 @mock MockWSClient AbstractWSClient
 ws_client = MockWSClient()
 @mockfunction(ws_client,
-    send_text(::MockWSClient, ::UTF8String),
+    send_text(::MockWSClient, ::String),
     stop(::MockWSClient),
     wsconnect(::MockWSClient, ::Requests.URI, ::WebSocketHandler))
 
@@ -91,12 +91,12 @@ mock_handler = MockRTMHandler()
 # Fake requests and mocking the makerequests function.
 #
 
-immutable FakeRequests <: AbstractHttp end
+struct FakeRequests <: AbstractHttp end
 fake_requests = FakeRequests()
 
 post(::FakeRequests, uri::AbstractString; args...) = nothing
 
-abstract AbstractMocker
+abstract type AbstractMocker end
 @mock Mocker AbstractMocker
 mocker = Mocker()
 @mockfunction mocker makerequest(::Any, ::FakeRequests)
@@ -107,7 +107,7 @@ mock_retry = MockRetry()
 
 
 token = Token("ABCDEF")
-ok_status = Status(true, Nullable{UTF8String}(utf8("")), Nullable{UTF8String}(utf8("")))
+ok_status = Status(true, Nullable{String}(utf8("")), Nullable{String}(utf8("")))
 # `fake_url` is what we get back from Slck. `expected_fake_url` is what the Slack URL needs to be
 # converted to, in order to send it into Requests.
 fake_url = utf8("ws://some/url")
@@ -411,9 +411,9 @@ facts("RTMClient") do
                                        ws_client_factory=x -> ws_client)
         attach(rtm, mock_handler)
 
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
 
         message_id_1 = DandelionSlack.send_event(rtm, FakeEvent())
         message_id_2 = DandelionSlack.send_event(rtm, FakeEvent())
@@ -442,7 +442,7 @@ facts("RTMClient") do
         rtm_connect(rtm_client; requests=fake_requests)
 
         # Send messages and verify that they are throttled.
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
 
         n = 5
         for i = 1:n
@@ -451,14 +451,14 @@ facts("RTMClient") do
         sleep(0.01)
         check(ws_client)
 
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
         # Wait for one throttling interval and verify that we haven't sent all messages yet.
         sleep(throttling)
         check(ws_client)
 
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
-        @expect ws_client send_text(ws_client, TypeMatcher(UTF8String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
+        @expect ws_client send_text(ws_client, TypeMatcher(String))
         # Sleep for the rest of the expected time and check that we have sent all messages.
         sleep(throttling * (n - 2) + 0.05)
 
